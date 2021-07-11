@@ -1,7 +1,6 @@
 module QuickSearch (buildQuickSearch, getMatchesWithCutoff, getTopMatches) where
 
 import           Control.Arrow
-import qualified Data.Bifunctor    as B
 import           Data.List         hiding (find)
 import qualified Data.Map          as M
 import           Data.Ord
@@ -24,9 +23,9 @@ data QuickSearch = QuickSearch {
 
 buildQuickSearch :: [(String, UID)] -> QuickSearch
 buildQuickSearch entries =
-  let entries' = map (B.first T.pack) entries
+  let entries' = map (first T.pack) entries
       tokenFilter = buildTokenPartitions entries'
-  in QuickSearch (map fst entries') (map snd entries') tokenFilter
+  in uncurry QuickSearch (unzip entries') tokenFilter
 
 toPercent :: Ratio Int -> Int
 toPercent r = floor $ (num / denom) * 100

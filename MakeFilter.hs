@@ -3,7 +3,7 @@
 
 module MakeFilter (buildTokenPartitions, getSearchPartition) where
 
-import qualified Data.Bifunctor    as B
+import           Control.Arrow
 import           Data.Char
 import           Data.List
 import qualified Data.Map          as M
@@ -25,7 +25,7 @@ getTokens = T.words . clean
       | otherwise = ' '
 
 buildTokenPartitions :: [(T.Text, UID)] -> M.Map Token [UID]
-buildTokenPartitions = tokenPartitions . map (B.first getTokens)
+buildTokenPartitions = tokenPartitions . map (first getTokens)
 
 tokenPartitions :: [([Token], UID)] -> M.Map Token [UID]
 tokenPartitions entries = M.fromList [(tok, allWith tok) | tok <- allTokens]
