@@ -5,12 +5,14 @@ WIP (but it does work now, it's just missing some
 convenience functions for batch processing)
 
 A framework for quickly locating the most likely match
-for a name (or other short string) in another set of names.
+for a name (or other short string) in another (very large) set of names. 
 Due to the heuristic it uses to speed up search, it's well
-suited for a first pass to reduce the population to be searched:
+suited for a first pass to reduce the population to be searched when reconciling large record sets:
 It uses maps to partition the search space to only attempt the
 expensive calculations on strings that share an entire token with
 the target string.
+Average retrieval time (on my machine, in ghci) per item 
+against a population of 100,000 strings is ~0.2 seconds. 
 
 Dependencies: Data.Text.Metrics
 
