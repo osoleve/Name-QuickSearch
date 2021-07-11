@@ -27,15 +27,15 @@ Usage:
 > entries
 [("Rep. Meg Mueller",1),("Twana Jacobs",2),("Terrell Hintz",3),("Fr. Jettie Satterfield",4),("Mr. Robert Robel",5),("Alonso Rodriguez III",6),("Brendan Hyatt",7),("Rep. Kazuko Price",8),("Sammie Paucek",9),("Dewey Armstrong MD",10)]
 
+> qs = buildQuickSearch entries
+
 -- Scorer can be any func of type (T.Text -> T.Text -> Ratio Int)
-> qs = buildQuickSearch entries damerauLevenshteinNorm
+> target = pack "Rep. Meg Muller"
+> getTopMatches 5 target qs jaroWinkler
+[(100,("Rep. Meg Mueller",1)),(81,("Rep. Kazuko Price",8))]
 
 > target = pack "Towana Jacobs"
-
-> getTopMatches 5 target qs
-[(92,("Twana Jacobs",2))]
-
-> getMatchesWithCutoff 90 target qs
+> getMatchesWithCutoff 90 target qs damerauLevenshteinNorm
 [(92,("Twana Jacobs",2))]
 ```
 
