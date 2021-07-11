@@ -5,16 +5,18 @@ WIP (but it does work now, it's just missing some
 convenience functions for batch processing)
 
 A framework for quickly locating the most likely match
-for a name (or other short string) in another (very large) set of names. 
-Due to the heuristic it uses to speed up search, it's well
-suited for a first pass to reduce the population to be searched when reconciling large record sets:
-It uses maps to partition the search space to only attempt the
-expensive calculations on strings that share an entire token with
-the target string.
-Average retrieval time (on my machine, in ghci) per item 
-against a population of 100,000 strings is ~0.2 seconds. 
+for a name (or other short string) in another (very large) set of names.
 
-Dependencies: Data.Text.Metrics
+Use case for which it was developed: You need to match records across two data
+sets using only names, but have too many records to reasonably
+perform string distance calculations between every pair in the cartesian set.
+QuickSearch only performs distance calculations between strings
+that share an entire token, making it well suited to quickly remove the low-hanging
+fruit. This in turn drastically reduces the sizes of the sets requiring a
+costly full scan, allowing for more iteration and experimentation on the edge cases.
+
+On my machine, in ghci, QuickSearch can retrieve the best matches for a string
+from a population of 100,000 strings in under a quarter of a second.
 
 Usage:
 
@@ -33,3 +35,5 @@ Usage:
 > getTopMatches 5 target qs
 [(92,("Twana Jacobs",2))]
 ```
+
+Shout out to Charles Sommers, who wrote the original tool I'm porting to Haskell.
