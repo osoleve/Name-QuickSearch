@@ -34,13 +34,6 @@ tokenPartitions entries = M.fromList [(tok, allWith tok) | tok <- allTokens]
     allWith :: Token -> [UID]
     allWith token = map snd $ filter ((token `elem`) . fst) entries
 
-dataPartitions :: forall a. (Ord a) => [(a, UID)] -> M.Map a [UID]
-dataPartitions entries = M.fromList [(item, allWith item) | item <- allItems]
-  where
-    allItems::[a] = nub . map fst $ entries
-    allWith :: a -> [UID]
-    allWith item = map snd $ filter ((==item) . fst) entries
-
 getSearchPartition :: T.Text -> M.Map Token [UID] -> [UID]
 getSearchPartition name tokenMap =
   let tokens = getTokens name
