@@ -34,6 +34,9 @@ Usage:
 
 > getTopMatches 5 target qs
 [(92,("Twana Jacobs",2))]
+
+> getMatchesWithCutoff 90 target qs
+[(92,("Twana Jacobs",2))]
 ```
 
 Shout out to Charles Sommers, who wrote the original tool I'm porting to Haskell.
