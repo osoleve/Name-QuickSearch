@@ -5,8 +5,9 @@ module MakeFilter (buildTokenPartitions, getSearchPartition) where
 
 import           Control.Arrow
 import           Data.Char
+import qualified Data.HashSet as HSet
 import           Data.List
-import qualified Data.Map          as M
+import qualified Data.Map as M
 import           Data.Maybe
 import qualified Data.Text         as T
 
@@ -24,17 +25,17 @@ getTokens = T.words . clean
       | any ($ c) [isUpper, isLower, isDigit, isSpace, (`elem` toDelete)] = c
       | otherwise = ' '
 
-buildTokenPartitions :: [(T.Text, UID)] -> M.Map Token [UID]
+buildTokenPartitions :: [(T.Text, UID)] -> M.Map Token (HSet.HashSet UID)
 buildTokenPartitions = tokenPartitions . map (first getTokens)
 
-tokenPartitions :: [([Token], UID)] -> M.Map Token [UID]
+tokenPartitions :: [([Token], UID)] -> M.Map Token (HSet.HashSet UID)
 tokenPartitions entries = M.fromList [(tok, allWith tok) | tok <- allTokens]
   where
     allTokens = nub . concatMap fst $ entries
-    allWith :: Token -> [UID]
-    allWith token = map snd $ filter ((token `elem`) . fst) entries
+    allWith :: Token -> HSet.HashSet UID
+    allWith token = HSet.fromList . map snd $ filter ((token `elem`) . fst) entries
 
-getSearchPartition :: T.Text -> M.Map Token [UID] -> [UID]
+getSearchPartition :: T.Text -> M.Map Token (HSet.HashSet UID) -> HSet.HashSet UID
 getSearchPartition name tokenMap =
   let tokens = getTokens name
-  in nub . concatMap (fromMaybe [] . flip M.lookup tokenMap) $ tokens
+  in HSet.unions $ map (fromMaybe HSet.empty . flip M.lookup tokenMap) tokens

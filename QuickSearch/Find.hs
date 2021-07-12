@@ -8,7 +8,8 @@ module QuickSearch.Find (
 ) where
 
 import           Control.Arrow
-import           Data.List     hiding (find)
+import           Data.List (sortOn)
+import           Data.HashSet  as HSet hiding (map, filter)
 import qualified Data.Map      as M
 import           Data.Ord
 import           Data.Ratio
@@ -24,14 +25,14 @@ type Scorer = (T.Text -> T.Text -> Ratio Int)
 data QuickSearch = QuickSearch {
   getNames       :: [T.Text],
   getUIDs        :: [UID],
-  getTokenFilter :: M.Map Token [UID]
+  getTokenFilter :: M.Map Token (HSet.HashSet UID)
 }
 
 find :: T.Text -> QuickSearch -> Scorer -> [(Score, (T.Text, UID))]
 find entry (QuickSearch names uids tokenFilter) scorer =
   let entries = zip names uids
       uidPartition = getSearchPartition entry tokenFilter
-      searchSpace = filter ((`elem` uidPartition) . snd) entries
+      searchSpace = filter (flip HSet.member uidPartition . snd) entries
       results = map (\it@(x,_) -> (toPercent $ scorer entry x, it)) searchSpace
   in sortOn (Down . fst) results
 

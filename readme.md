@@ -16,7 +16,7 @@ fruit. This in turn drastically reduces the sizes of the sets requiring a
 costly full scan, allowing for more iteration and experimentation on the edge cases.
 
 On my machine, in ghci, QuickSearch can retrieve the best matches for a string
-from a population of 100,000 strings in under a quarter of a second.
+from a population of 100,000 strings in an average of ~0.02 seconds.
 
 Uses `Data.Text` internally, but there is an identical `String` interface
 to be found at `QuickSearch.String` if that suits the pipeline better.
