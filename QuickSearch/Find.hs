@@ -8,8 +8,8 @@ module QuickSearch.Find (
 ) where
 
 import           Control.Arrow
-import           Data.List (sortOn)
-import           Data.HashSet  as HSet hiding (map, filter)
+import           Data.HashSet  as HSet hiding (filter, map)
+import           Data.List     (sortOn)
 import qualified Data.Map      as M
 import           Data.Ord
 import           Data.Ratio

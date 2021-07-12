@@ -9,13 +9,9 @@ module QuickSearch (
   QuickSearch(QuickSearch)
 ) where
 
-import           Control.Arrow
-import           Data.List         hiding (find)
 import qualified Data.Map          as M
-import           Data.Ord
-import           Data.Ratio
 import qualified Data.Text         as T
-import           Data.Text.Metrics
+import           Data.Text.Metrics (damerauLevenshteinNorm, jaro, jaroWinkler)
 
 import           MakeFilter
 import           QuickSearch.Find

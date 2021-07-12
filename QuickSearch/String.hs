@@ -5,15 +5,13 @@ module QuickSearch.String (
 ) where
 
 import           Control.Arrow
-import qualified Data.Text  as T
-import           Data.Ratio
-import qualified Data.Map   as M
-import           Data.Text.Metrics
+import qualified Data.Map         as M
+import qualified Data.Text        as T
 
-import MakeFilter
-import QuickSearch
-  hiding (buildQuickSearch, getTopMatches, getMatchesWithCutoff)
-import QuickSearch.Find
+import           MakeFilter
+import           QuickSearch      hiding (buildQuickSearch,
+                                   getMatchesWithCutoff, getTopMatches)
+import           QuickSearch.Find
 
 buildQuickSearch :: [(String, UID)] -> QuickSearch
 buildQuickSearch entries =
