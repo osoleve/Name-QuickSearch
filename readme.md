@@ -25,8 +25,9 @@ Usage:
 
 ```haskell
 > import QuickSearch
-> -- or, import QuickSearch.String
-> names = ["Rep. Meg Mueller","Twana Jacobs","Terrell Hintz","Fr. Jettie Satterfield","Mr. Robert Robel","Alonso Rodriguez III","Brendan Hyatt","Rep. Kazuko Price","Sammie Paucek","Dewey Armstrong MD"]
+-- or, import QuickSearch.String
+
+> names = map T.pack ["Rep. Meg Mueller","Twana Jacobs","Terrell Hintz","Fr. Jettie Satterfield","Mr. Robert Robel","Alonso Rodriguez III","Brendan Hyatt","Rep. Kazuko Price","Sammie Paucek","Dewey Armstrong MD"]
 
 > entries = zip names [1..] --Stand-in for your UIDs
 > entries
@@ -36,8 +37,8 @@ Usage:
 
 -- Scorer can be any func of type (T.Text -> T.Text -> Ratio Int)
 > target = pack "Rep. Meg Muller"
-> getTopMatches 5 target qs jaroWinkler
-[(100,("Rep. Meg Mueller",1)),(81,("Rep. Kazuko Price",8))]
+> getTopMatches 1 target qs jaroWinkler
+[(100,("Rep. Meg Mueller",1))]
 
 > target = pack "Towana Jacobs"
 > getMatchesWithCutoff 90 target qs damerauLevenshteinNorm
