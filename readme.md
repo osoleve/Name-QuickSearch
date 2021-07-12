@@ -18,9 +18,14 @@ costly full scan, allowing for more iteration and experimentation on the edge ca
 On my machine, in ghci, QuickSearch can retrieve the best matches for a string
 from a population of 100,000 strings in under a quarter of a second.
 
+Uses `Data.Text` internally, but there is an identical `String` interface
+to be found at `QuickSearch.String` if that suits the pipeline better.
+
 Usage:
 
 ```haskell
+> import QuickSearch
+> -- or, import QuickSearch.String
 > names = ["Rep. Meg Mueller","Twana Jacobs","Terrell Hintz","Fr. Jettie Satterfield","Mr. Robert Robel","Alonso Rodriguez III","Brendan Hyatt","Rep. Kazuko Price","Sammie Paucek","Dewey Armstrong MD"]
 
 > entries = zip names [1..] --Stand-in for your UIDs
