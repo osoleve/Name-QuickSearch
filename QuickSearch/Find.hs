@@ -1,3 +1,5 @@
+{-# LANGUAGE ViewPatterns #-}
+
 module QuickSearch.Find (
   find,
   Token,
@@ -29,11 +31,11 @@ data QuickSearch = QuickSearch {
 }
 
 find :: T.Text -> QuickSearch -> Scorer -> [(Score, (T.Text, UID))]
-find entry (QuickSearch names uids tokenFilter) scorer =
+find (T.toCaseFold -> entry) (QuickSearch names uids tokenFilter) scorer =
   let entries = zip names uids
       uidPartition = getSearchPartition entry tokenFilter
       searchSpace = filter (flip HSet.member uidPartition . snd) entries
-      results = map (\it@(x,_) -> (toPercent $ scorer entry x, it)) searchSpace
+      results = map (toPercent . scorer entry . T.toCaseFold . fst &&& id) searchSpace
   in sortOn (Down . fst) results
 
 toPercent :: Ratio Int -> Int

@@ -15,14 +15,14 @@ type UID = Int
 type Token = T.Text
 
 getTokens :: T.Text -> [Token]
-getTokens = T.words . clean
+getTokens = T.words . clean . T.toCaseFold
   where
     toDelete = ".'"::String
     clean :: T.Text -> T.Text
     clean = T.filter (`notElem` toDelete) . T.map cleanChar
     cleanChar :: Char -> Char
     cleanChar c
-      | any ($ c) [isUpper, isLower, isDigit, isSpace, (`elem` toDelete)] = c
+      | any ($ c) [isLower, isDigit, isSpace, (`elem` toDelete)] = c
       | otherwise = ' '
 
 buildTokenPartitions :: [(T.Text, UID)] -> M.Map Token (HSet.HashSet UID)

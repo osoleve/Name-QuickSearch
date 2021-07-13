@@ -1,3 +1,5 @@
+{-# LANGUAGE ViewPatterns #-}
+
 module QuickSearch.String (
   buildQuickSearch,
   getTopMatches,
@@ -7,6 +9,7 @@ module QuickSearch.String (
 import           Control.Arrow
 import qualified Data.Map         as M
 import qualified Data.Text        as T
+import           Data.Text.Metrics (damerauLevenshteinNorm, jaro, jaroWinkler)
 
 import           MakeFilter
 import           QuickSearch      hiding (buildQuickSearch,
@@ -14,17 +17,18 @@ import           QuickSearch      hiding (buildQuickSearch,
 import           QuickSearch.Find
 
 buildQuickSearch :: [(String, UID)] -> QuickSearch
-buildQuickSearch entries =
-  let entries' = map (first T.pack) entries
-      tokenFilter = buildTokenPartitions entries'
-  in uncurry QuickSearch (unzip entries') tokenFilter
+buildQuickSearch (map (first T.pack) -> entries) =
+  let tokenFilter = buildTokenPartitions entries
+  in uncurry QuickSearch (unzip entries) tokenFilter
 
 getTopMatches :: Int -> String -> QuickSearch -> Scorer -> [(Score, (String, UID))]
-getTopMatches n entry quicksearch scorer =
-  let results = take n (find (T.pack entry) quicksearch scorer)
-  in map ((second . first) T.unpack) results
+getTopMatches n (T.pack -> entry) quicksearch scorer =
+  let results = take n (find entry quicksearch scorer)
+      resultsTextToString = map ((second . first) T.unpack)
+  in resultsTextToString results
 
 getMatchesWithCutoff :: Int -> String -> QuickSearch -> Scorer -> [(Score, (String, UID))]
-getMatchesWithCutoff cutoff entry quicksearch scorer =
-  let results = takeWhile ((> cutoff) . fst) $ find (T.pack entry) quicksearch scorer
-  in map ((second . first) T.unpack) results
+getMatchesWithCutoff cutoff (T.pack -> entry) quicksearch scorer =
+  let results = find entry quicksearch scorer
+      resultsTextToString = map ((second . first) T.unpack)
+  in resultsTextToString . takeWhile ((> cutoff) . fst) $ results
