@@ -1,11 +1,8 @@
 QuickSearch
 ---
 
-WIP (but it does work now, it's just missing some
-convenience functions for batch processing)
-
-A framework for quickly locating the most likely match
-for a name (or other short string) in another (very large) set of names.
+A tool for quickly locating the most likely match
+for a name (or other short natural language string) in another (very large) set of names.
 
 Use case for which it was developed: You need to match records across two data
 sets using only names, but have too many records to reasonably
@@ -44,5 +41,18 @@ Usage:
 > getMatchesWithCutoff 90 target qs damerauLevenshteinNorm
 [(92,("Twana Jacobs",2))]
 ```
+
+If you have your list of names to be matched and list of target names both
+in the form `[(T.Text, Int)]`, you can run it in batch mode with
+
+```haskell
+names, targets :: [(T.Text, Int)]
+scorer :: (T.Text -> T.Text -> Ratio Int)
+scorer = damerauLevenshteinNorm
+
+> oneShotBatchProcess names targets scorer
+```
+which will return a list of `(entry, (score, target))`. Able to process thousands
+of names against a population of a hundred thousand names in under a second.
 
 Shout out to Charles Sommers, who wrote the original tool I'm porting to Haskell.
