@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 module QuickSearch
   ( buildQuickSearch
   , getMatchesWithCutoff
@@ -19,12 +21,12 @@ import           Data.Text.Metrics              ( damerauLevenshteinNorm
                                                 , jaroWinkler
                                                 )
 
-import           MakeFilter
+import           QuickSearch.Filter
 import           QuickSearch.Find
 
 buildQuickSearch :: [(T.Text, UID)] -> QuickSearch
 buildQuickSearch entries =
-  let tokenFilter = buildTokenPartitions entries
+  let !tokenFilter = buildTokenPartitions entries
   in  uncurry QuickSearch (unzip entries) tokenFilter
 
 getTopMatches

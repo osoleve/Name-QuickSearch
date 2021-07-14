@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module QuickSearch.String
@@ -9,24 +10,20 @@ module QuickSearch.String
 where
 
 import           Control.Arrow
-import qualified Data.Map                      as M
+import qualified Data.Map           as M
 import           Data.Ratio
-import qualified Data.Text                     as T
-import           Data.Text.Metrics              ( damerauLevenshteinNorm
-                                                , jaro
-                                                , jaroWinkler
-                                                )
+import qualified Data.Text          as T
+import           Data.Text.Metrics  (damerauLevenshteinNorm, jaro, jaroWinkler)
 
-import           MakeFilter
-import           QuickSearch             hiding ( buildQuickSearch
-                                                , getMatchesWithCutoff
-                                                , getTopMatches
-                                                )
+import           QuickSearch        hiding (buildQuickSearch,
+                                     getMatchesWithCutoff, getTopMatches,
+                                     oneShotBatchProcess)
+import           QuickSearch.Filter
 import           QuickSearch.Find
 
 buildQuickSearch :: [(String, UID)] -> QuickSearch
 buildQuickSearch (map (first T.pack) -> entries) =
-  let tokenFilter = buildTokenPartitions entries
+  let !tokenFilter = buildTokenPartitions entries
   in  uncurry QuickSearch (unzip entries) tokenFilter
 
 getTopMatches

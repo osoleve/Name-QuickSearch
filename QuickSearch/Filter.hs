@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module MakeFilter
+module QuickSearch.Filter
   ( buildTokenPartitions
   , getSearchPartition
   )

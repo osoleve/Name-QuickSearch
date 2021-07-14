@@ -1,4 +1,4 @@
-QuickSearch
+Name-QuickSearch
 ---
 
 A tool for quickly locating the most likely match
@@ -22,13 +22,10 @@ Usage:
 
 ```haskell
 > import QuickSearch
--- or, import QuickSearch.String
 
-> names = map T.pack ["Rep. Meg Mueller","Twana Jacobs","Terrell Hintz","Fr. Jettie Satterfield","Mr. Robert Robel","Alonso Rodriguez III","Brendan Hyatt","Rep. Kazuko Price","Sammie Paucek","Dewey Armstrong MD"]
+> names = map T.pack ["Rep. Meg Mueller","Twana Jacobs",...,"Sammie Paucek"]
 
 > entries = zip names [1..] --Stand-in for your UIDs
-> entries
-[("Rep. Meg Mueller",1),("Twana Jacobs",2),("Terrell Hintz",3),("Fr. Jettie Satterfield",4),("Mr. Robert Robel",5),("Alonso Rodriguez III",6),("Brendan Hyatt",7),("Rep. Kazuko Price",8),("Sammie Paucek",9),("Dewey Armstrong MD",10)]
 
 > qs = buildQuickSearch entries
 
@@ -42,6 +39,8 @@ Usage:
 [(92,("Twana Jacobs",2))]
 ```
 
+## Batch Usage
+
 If you have your list of names to be matched and list of target names both
 in the form `[(T.Text, Int)]`, you can run it in batch mode with
 
@@ -52,7 +51,11 @@ scorer = damerauLevenshteinNorm
 
 > oneShotBatchProcess names targets scorer
 ```
-which will return a list of `(entry, (score, target))`. Able to process thousands
-of names against a population of a hundred thousand names in under a second.
+which will return a list of `(entry, (score, target))`, where `target` is the
+found name and its UID.
+
+Able to process thousands of names against a population of
+a hundred thousand names in under a second (on average... first search always
+takes several seconds to build the filters).
 
 Shout out to Charles Sommers, who wrote the original tool I'm porting to Haskell.

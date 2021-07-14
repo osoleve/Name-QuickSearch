@@ -11,17 +11,14 @@ module QuickSearch.Find
 where
 
 import           Control.Arrow
-import           Data.HashSet                  as HSet
-                                         hiding ( filter
-                                                , map
-                                                )
-import           Data.List                      ( sortOn )
-import qualified Data.Map                      as M
+import           Data.HashSet  as HSet hiding (filter, map)
+import           Data.List     (sortOn)
+import qualified Data.Map      as M
 import           Data.Ord
 import           Data.Ratio
-import qualified Data.Text                     as T
+import qualified Data.Text     as T
 
-import           MakeFilter
+import           QuickSearch.Filter
 
 type Token = T.Text
 type UID = Int
@@ -38,7 +35,7 @@ find :: T.Text -> QuickSearch -> Scorer -> [(Score, (T.Text, UID))]
 find (T.toCaseFold -> entry) (QuickSearch names uids tokenFilter) scorer =
   let entries      = zip names uids
       uidPartition = getSearchPartition entry tokenFilter
-      searchSpace  = filter (flip HSet.member uidPartition . snd) entries
+      searchSpace  = filter ((`HSet.member` uidPartition) . snd) entries
       results =
         map (toPercent . scorer entry . T.toCaseFold . fst &&& id) searchSpace
   in  sortOn (Down . fst) results
