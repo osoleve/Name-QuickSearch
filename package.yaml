@@ -1,0 +1,28 @@
+name:                Name-QuickSearch
+version:             0.1.0.0
+github:              "osoleve/Name-QuickSearch"
+license:             BSD3
+author:              "oso"
+maintainer:          "example@example.com"
+copyright:           "2021 oso"
+
+extra-source-files:
+- README.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/osoleve/Name-QuickSearch#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- unordered-containers >= 0.2.14
+- text
+- text-metrics >= 0.3
+
+library:
+  source-dirs: src
