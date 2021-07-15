@@ -30,31 +30,31 @@ buildQuickSearch entries =
   in  uncurry QuickSearch (unzip entries) tokenFilter
 
 topNMatches
-  :: Int -> T.Text -> QuickSearch -> Scorer -> [(Score, (T.Text, UID))]
-topNMatches n entry quicksearch scorer = take n (find entry quicksearch scorer)
+  :: QuickSearch -> Int -> Scorer -> T.Text -> [(Score, (T.Text, UID))]
+topNMatches qs n scorer entry = take n (find entry qs scorer)
 
 matchesWithCutoff
-  :: Int -> T.Text -> QuickSearch -> Scorer -> [(Score, (T.Text, UID))]
-matchesWithCutoff cutoff entry quicksearch scorer =
-  let results = find entry quicksearch scorer
+  :: QuickSearch -> Int -> Scorer -> T.Text -> [(Score, (T.Text, UID))]
+matchesWithCutoff qs cutoff scorer entry =
+  let results = find entry qs scorer
   in  takeWhile ((>= cutoff) . fst) results
 
 batchTopNMatches
-  :: Int
-  -> [(T.Text, UID)]
-  -> QuickSearch
+  :: QuickSearch
+  -> Int
   -> (T.Text -> T.Text -> Ratio Int)
+  -> [(T.Text, UID)]
   -> [((T.Text, UID), [(Score, (T.Text, UID))])]
-batchTopNMatches n entries qs scorer =
-  let results = map (\(x, _) -> topNMatches n x qs scorer) entries
+batchTopNMatches qs n scorer entries =
+  let results = map (topNMatches qs n scorer . fst) entries
   in  zip entries results
 
 batchMatchesWithCutoff
-  :: Int
-  -> [(T.Text, UID)]
-  -> QuickSearch
+  :: QuickSearch
+  -> Int
   -> (T.Text -> T.Text -> Ratio Int)
+  -> [(T.Text, UID)]
   -> [((T.Text, UID), [(Score, (T.Text, UID))])]
-batchMatchesWithCutoff cutoff entries qs scorer =
-  let results = map (\(x, _) -> matchesWithCutoff cutoff x qs scorer) entries
+batchMatchesWithCutoff qs cutoff scorer entries =
+  let results = map (matchesWithCutoff qs cutoff scorer . fst) entries
   in  zip entries results

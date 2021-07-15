@@ -25,17 +25,17 @@ Usage:
 
 > names = map T.pack ["Rep. Meg Mueller","Twana Jacobs",...,"Sammie Paucek"]
 
-> entries = zip names [1..] --Stand-in for your UIDs
+> targets = zip names [1..] --Stand-in for your UIDs
 
-> qs = buildQuickSearch entries
+> qs = buildQuickSearch targets
 
 -- Scorer can be any func of type (T.Text -> T.Text -> Ratio Int)
-> target = pack "Rep. Meg Muller"
-> topNMatches 1 target qs jaroWinkler
+> entry = pack "Rep. Meg Muller"
+> topNMatches qs 1 jaroWinkler entry
 [(100,("Rep. Meg Mueller",1))]
 
-> target = pack "Towana Jacobs"
-> matchesWithCutoff 90 target qs damerauLevenshteinNorm
+> entry = pack "Towana Jacobs"
+> matchesWithCutoff qs 90 damerauLevenshteinNorm entry
 [(92,("Twana Jacobs",2))]
 ```
 

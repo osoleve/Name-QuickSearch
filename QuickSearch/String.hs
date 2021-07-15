@@ -22,8 +22,10 @@ import           Data.Ratio
 import qualified Data.Text          as T
 import           Data.Text.Metrics  (damerauLevenshteinNorm, jaro, jaroWinkler)
 
-import           QuickSearch        hiding (buildQuickSearch, matchesWithCutoff,
-                                     oneShotBatchProcess, topNMatches)
+import           QuickSearch        hiding (batchMatchesWithCutoff,
+                                     batchTopNMatches, buildQuickSearch,
+                                     matchesWithCutoff, oneShotBatchProcess,
+                                     topNMatches)
 import           QuickSearch.Filter
 import           QuickSearch.Find
 
@@ -33,35 +35,35 @@ buildQuickSearch (map (first T.pack) -> entries) =
   in  uncurry QuickSearch (unzip entries) tokenFilter
 
 topNMatches
-  :: Int -> String -> QuickSearch -> Scorer -> [(Score, (String, UID))]
-topNMatches n (T.pack -> entry) quicksearch scorer =
-  let results             = take n (find entry quicksearch scorer)
+  :: QuickSearch -> Int -> Scorer -> String -> [(Score, (String, UID))]
+topNMatches qs n scorer (T.pack -> entry) =
+  let results             = take n (find entry qs scorer)
       resultsTextToString = map ((second . first) T.unpack)
   in  resultsTextToString results
 
 matchesWithCutoff
-  :: Int -> String -> QuickSearch -> Scorer -> [(Score, (String, UID))]
-matchesWithCutoff cutoff (T.pack -> entry) quicksearch scorer =
-  let results             = find entry quicksearch scorer
+  :: QuickSearch -> Int -> Scorer -> String -> [(Score, (String, UID))]
+matchesWithCutoff qs cutoff scorer (T.pack -> entry) =
+  let results             = find entry qs scorer
       resultsTextToString = map ((second . first) T.unpack)
   in  resultsTextToString . takeWhile ((>= cutoff) . fst) $ results
 
 batchTopNMatches
-  :: Int
-  -> [(String, UID)]
-  -> QuickSearch
+  :: QuickSearch
+  -> Int
   -> (T.Text -> T.Text -> Ratio Int)
+  -> [(String, UID)]
   -> [((String, UID), [(Score, (String, UID))])]
-batchTopNMatches n entries qs scorer =
-  let results = map (\(x, _) -> topNMatches n x qs scorer) entries
+batchTopNMatches qs n scorer entries =
+  let results = map (topNMatches qs n scorer . fst) entries
   in  zip entries results
 
 batchMatchesWithCutoff
-  :: Int
-  -> [(String, UID)]
-  -> QuickSearch
+  :: QuickSearch
+  -> Int
   -> (T.Text -> T.Text -> Ratio Int)
+  -> [(String, UID)]
   -> [((String, UID), [(Score, (String, UID))])]
-batchMatchesWithCutoff cutoff entries qs scorer =
-  let results = map (\(x, _) -> matchesWithCutoff cutoff x qs scorer) entries
+batchMatchesWithCutoff qs cutoff scorer entries =
+  let results = map (matchesWithCutoff qs cutoff scorer . fst) entries
   in  zip entries results
