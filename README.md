@@ -1,5 +1,4 @@
-Name-QuickSearch
----
+# QuickSearch
 
 A tool for quickly locating the most likely match
 for a name (or other short natural language string) in another (very large) set of names.
@@ -40,22 +39,25 @@ Usage:
 [(92,("Twana Jacobs",2))]
 ```
 
-## Batch Usage
+### QuickSearch.OneShot
 
 If you have your list of names to be matched and list of target names both
-in the form `[(T.Text, Int)]`, you can run it in batch mode with
+in the form `[(T.Text, Int)]` (or `[(String, Int)]`) and you don't plan on re-using
+the QuickSearch filters, you can run it as a one-shot batch with
 
 ```haskell
+import QuickSearch.OneShot
+-- or, import QuickSearch.String.OneShot
+
 names, targets :: [(T.Text, Int)]
 scorer :: (T.Text -> T.Text -> Ratio Int)
-scorer = damerauLevenshteinNorm
 
-> batchGetBestMatches names targets scorer
+> oneShotGetBestMatches names targets scorer
 ```
 which will return a list of `(entry, [(score, target)])`, where `target`s are the
 found names and their UIDs with the highest match score.
 
-`topNMatches` and `matchesWithCutoff` both have similar batch versions, named
-`batchTopNMatches` and `batchMatchesWithCutoff` respectively.
+`topNMatches` and `matchesWithCutoff` both have similar one-shot batch versions, named
+`oneShotTopNMatches` and `oneShotMatchesWithCutoff` respectively.
 
 Shout out to Charles Sommers, who wrote the original tool I'm porting to Haskell.
