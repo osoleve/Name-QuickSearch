@@ -1,0 +1,42 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.34.4.
+--
+-- see: https://github.com/sol/hpack
+
+name:           Name-QuickSearch
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/osoleve/Name-QuickSearch#readme>
+homepage:       https://github.com/osoleve/Name-QuickSearch#readme
+bug-reports:    https://github.com/osoleve/Name-QuickSearch/issues
+author:         oso
+maintainer:     example@example.com
+copyright:      2021 oso
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/osoleve/Name-QuickSearch
+
+library
+  exposed-modules:
+      QuickSearch
+      QuickSearch.Filter
+      QuickSearch.Find
+      QuickSearch.OneShot
+      QuickSearch.String
+      QuickSearch.String.OneShot
+  other-modules:
+      Paths_Name_QuickSearch
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+    , text
+    , text-metrics >=0.3
+    , unordered-containers >=0.2.14
+  default-language: Haskell2010

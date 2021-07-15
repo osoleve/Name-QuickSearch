@@ -65,4 +65,4 @@ found names and their UIDs with the highest match score.
 `topNMatches` and `matchesWithCutoff` both have similar one-shot batch versions, named
 `oneShotTopNMatches` and `oneShotMatchesWithCutoff` respectively.
 
-Shout out to Charles Sommers, who wrote the original tool I'm porting to Haskell.
+Shout out to Charles Sommers, who wrote the original tool I'm reimplementing the idea of.
