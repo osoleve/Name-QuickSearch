@@ -1,11 +1,14 @@
 module QuickSearch.String.OneShot
-  (oneShotGetBestMatches, oneShotTopNMatches, oneShotMatchesWithCutoff)
-  where
+  ( oneShotGetBestMatches
+  , oneShotTopNMatches
+  , oneShotMatchesWithCutoff
+  )
+where
 
 import           Data.Function
 import           Data.List
 import           Data.Ratio
-import qualified Data.Text         as T
+import qualified Data.Text          as T
 import           Data.Text.Metrics
 
 import           QuickSearch.String

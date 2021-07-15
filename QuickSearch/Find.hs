@@ -11,12 +11,12 @@ module QuickSearch.Find
 where
 
 import           Control.Arrow
-import           Data.HashSet  as HSet hiding (filter, map)
-import           Data.List     (sortOn)
-import qualified Data.Map      as M
+import           Data.HashSet       as HSet hiding (filter, map)
+import           Data.List          (sortOn)
+import qualified Data.Map           as M
 import           Data.Ord
 import           Data.Ratio
-import qualified Data.Text     as T
+import qualified Data.Text          as T
 
 import           QuickSearch.Filter
 

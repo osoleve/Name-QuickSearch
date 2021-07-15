@@ -8,11 +8,11 @@ where
 
 import           Control.Arrow
 import           Data.Char
-import qualified Data.HashSet                  as HSet
+import qualified Data.HashSet  as HSet
 import           Data.List
-import qualified Data.Map                      as M
+import qualified Data.Map      as M
 import           Data.Maybe
-import qualified Data.Text                     as T
+import qualified Data.Text     as T
 
 type UID = Int
 type Token = T.Text

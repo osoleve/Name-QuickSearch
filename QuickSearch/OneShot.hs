@@ -1,6 +1,9 @@
 module QuickSearch.OneShot
-  (oneShotGetBestMatches, oneShotTopNMatches, oneShotMatchesWithCutoff)
-  where
+  ( oneShotGetBestMatches
+  , oneShotTopNMatches
+  , oneShotMatchesWithCutoff
+  )
+where
 
 import           Data.Function
 import           Data.List
