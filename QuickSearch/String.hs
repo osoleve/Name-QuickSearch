@@ -16,8 +16,6 @@ module QuickSearch.String
 where
 
 import           Control.Arrow
-import           Data.Function
-import qualified Data.Map           as M
 import           Data.Ratio
 import qualified Data.Text          as T
 import           Data.Text.Metrics  (damerauLevenshteinNorm, jaro, jaroWinkler)

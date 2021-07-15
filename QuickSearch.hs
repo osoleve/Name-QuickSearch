@@ -14,9 +14,7 @@ module QuickSearch
   )
 where
 
-import           Data.Function
 import           Data.List          hiding (find)
-import qualified Data.Map           as M
 import           Data.Ratio
 import qualified Data.Text          as T
 import           Data.Text.Metrics  (damerauLevenshteinNorm, jaro, jaroWinkler)

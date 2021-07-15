@@ -11,9 +11,9 @@ module QuickSearch.Find
 where
 
 import           Control.Arrow
-import           Data.HashSet       as HSet hiding (filter, map)
+import qualified Data.HashMap.Lazy  as HMap
+import qualified Data.HashSet       as HSet
 import           Data.List          (sortOn)
-import qualified Data.Map           as M
 import           Data.Ord
 import           Data.Ratio
 import qualified Data.Text          as T
@@ -28,7 +28,7 @@ type Scorer = (T.Text -> T.Text -> Ratio Int)
 data QuickSearch = QuickSearch
   { getNames       :: [T.Text]
   , getUIDs        :: [UID]
-  , getTokenFilter :: M.Map Token (HSet.HashSet UID)
+  , getTokenFilter :: HMap.HashMap Token (HSet.HashSet UID)
   }
 
 find :: T.Text -> QuickSearch -> Scorer -> [(Score, (T.Text, UID))]

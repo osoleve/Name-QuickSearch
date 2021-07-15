@@ -20,7 +20,7 @@ oneShotGetBestMatches
   -> [((String, UID), [(Score, (String, UID))])]
 oneShotGetBestMatches entries targets scorer =
   let qs      = buildQuickSearch targets
-      results = map (\(x, _) -> matchesWithCutoff 0 x qs scorer) entries
+      results = map (matchesWithCutoff qs 0 scorer . fst) entries
       bests   = map (head . groupBy ((==) `on` fst)) results
   in  zip entries bests
 
@@ -32,7 +32,7 @@ oneShotTopNMatches
   -> [((String, UID), [(Score, (String, UID))])]
 oneShotTopNMatches n entries targets scorer =
   let qs      = buildQuickSearch targets
-      results = map (\(x, _) -> topNMatches n x qs scorer) entries
+      results = map (topNMatches qs n scorer . fst) entries
   in  zip entries results
 
 oneShotMatchesWithCutoff
@@ -43,5 +43,5 @@ oneShotMatchesWithCutoff
   -> [((String, UID), [(Score, (String, UID))])]
 oneShotMatchesWithCutoff cutoff entries targets scorer =
   let qs      = buildQuickSearch targets
-      results = map (\(x, _) -> matchesWithCutoff cutoff x qs scorer) entries
+      results = map (matchesWithCutoff qs cutoff scorer . fst) entries
   in  zip entries results
