@@ -39,7 +39,12 @@ Usage:
 [(92,("Twana Jacobs",2))]
 ```
 
-### QuickSearch.OneShot
+### Batch Usage
+
+Both `topNMatches` and `matchesWithCutoff` have an associated batch function for processing entire lists at once, named `batchTopNMatches` and `batchMatchesWithCutoff`. These take lists of pairs of names and UIDs instead of a target string, and return for each entry the results of running the associated single function.
+
+
+## QuickSearch.OneShot
 
 If you have your list of names to be matched and list of target names both
 in the form `[(T.Text, Int)]` (or `[(String, Int)]`) and you don't plan on re-using
