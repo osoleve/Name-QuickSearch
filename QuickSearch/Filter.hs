@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module QuickSearch.Filter
@@ -21,7 +20,7 @@ type Token = T.Text
 getTokens :: T.Text -> [Token]
 getTokens = T.words . clean . T.toCaseFold
  where
-  toDelete = ".'" :: String
+  toDelete = ".'"
   clean :: T.Text -> T.Text
   clean = T.filter (`notElem` toDelete) . T.map cleanChar
   cleanChar :: Char -> Char

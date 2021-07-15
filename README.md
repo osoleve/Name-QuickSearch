@@ -12,8 +12,9 @@ that share an entire token, making it well suited to quickly remove the low-hang
 fruit. This in turn drastically reduces the sizes of the sets requiring a
 costly full scan, allowing for more iteration and experimentation on the edge cases.
 
-On my machine, in ghci, QuickSearch can retrieve the best matches for a string
-from a population of 100,000 strings in an average of ~0.02 seconds.
+Able to process thousands of names against a population of a hundred thousand names
+in under a second (once the QuickSearch is actually built... first search always takes
+several seconds to build the filters).
 
 Uses `Data.Text` internally, but there is an identical `String` interface
 to be found at `QuickSearch.String` if that suits the pipeline better.
@@ -31,11 +32,11 @@ Usage:
 
 -- Scorer can be any func of type (T.Text -> T.Text -> Ratio Int)
 > target = pack "Rep. Meg Muller"
-> getTopMatches 1 target qs jaroWinkler
+> topNMatches 1 target qs jaroWinkler
 [(100,("Rep. Meg Mueller",1))]
 
 > target = pack "Towana Jacobs"
-> getMatchesWithCutoff 90 target qs damerauLevenshteinNorm
+> matchesWithCutoff 90 target qs damerauLevenshteinNorm
 [(92,("Twana Jacobs",2))]
 ```
 
@@ -49,13 +50,12 @@ names, targets :: [(T.Text, Int)]
 scorer :: (T.Text -> T.Text -> Ratio Int)
 scorer = damerauLevenshteinNorm
 
-> oneShotBatchProcess names targets scorer
+> batchGetBestMatches names targets scorer
 ```
-which will return a list of `(entry, (score, target))`, where `target` is the
-found name and its UID.
+which will return a list of `(entry, [(score, target)])`, where `target`s are the
+found names and their UIDs with the highest match score.
 
-Able to process thousands of names against a population of
-a hundred thousand names in under a second (on average... first search always
-takes several seconds to build the filters).
+`topNMatches` and `matchesWithCutoff` both have similar batch versions, named
+`batchTopNMatches` and `batchMatchesWithCutoff` respectively.
 
 Shout out to Charles Sommers, who wrote the original tool I'm porting to Haskell.
