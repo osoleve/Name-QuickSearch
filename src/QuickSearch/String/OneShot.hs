@@ -1,5 +1,5 @@
 module QuickSearch.String.OneShot
-  ( oneShotGetBestMatches
+  ( oneShot
   , oneShotTopNMatches
   , oneShotMatchesWithCutoff
   )
@@ -13,35 +13,30 @@ import           Data.Text.Metrics
 
 import           QuickSearch.String
 
-oneShotGetBestMatches
-  :: [(String, UID)]
-  -> [(String, UID)]
-  -> (T.Text -> T.Text -> Ratio Int)
-  -> [((String, UID), [(Score, (String, UID))])]
-oneShotGetBestMatches entries targets scorer =
-  let qs      = buildQuickSearch targets
-      results = map (matchesWithCutoff qs 0 scorer . fst) entries
-      bests   = map (head . groupBy ((==) `on` fst)) results
-  in  zip entries bests
+oneShot
+  :: (QuickSearch -> Int -> Scorer -> String -> [(Score, Record)])
+  -> Int
+  -> [Record]
+  -> [Record]
+  -> Scorer
+  -> [(Record, [(Score, Record)])]
+oneShot f n entries targets scorer =
+  let qs = buildQuickSearch targets
+      results = map (f qs n scorer . fst) entries
+  in  zip entries results
 
 oneShotTopNMatches
   :: Int
-  -> [(String, UID)]
-  -> [(String, UID)]
-  -> (T.Text -> T.Text -> Ratio Int)
-  -> [((String, UID), [(Score, (String, UID))])]
-oneShotTopNMatches n entries targets scorer =
-  let qs      = buildQuickSearch targets
-      results = map (topNMatches qs n scorer . fst) entries
-  in  zip entries results
+  -> [Record]
+  -> [Record]
+  -> Scorer
+  -> [(Record, [(Score, Record)])]
+oneShotTopNMatches = oneShot topNMatches
 
 oneShotMatchesWithCutoff
   :: Int
-  -> [(String, UID)]
-  -> [(String, UID)]
-  -> (T.Text -> T.Text -> Ratio Int)
-  -> [((String, UID), [(Score, (String, UID))])]
-oneShotMatchesWithCutoff cutoff entries targets scorer =
-  let qs      = buildQuickSearch targets
-      results = map (matchesWithCutoff qs cutoff scorer . fst) entries
-  in  zip entries results
+  -> [Record]
+  -> [Record]
+  -> Scorer
+  -> [(Record, [(Score, Record)])]
+oneShotMatchesWithCutoff = oneShot matchesWithCutoff

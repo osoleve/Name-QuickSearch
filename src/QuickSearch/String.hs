@@ -23,7 +23,7 @@ import           Data.Text.Metrics  (damerauLevenshteinNorm, jaro, jaroWinkler)
 import           QuickSearch        hiding (batchMatchesWithCutoff,
                                      batchTopNMatches, buildQuickSearch,
                                      matchesWithCutoff, oneShotBatchProcess,
-                                     topNMatches)
+                                     topNMatches, Record)
 import           QuickSearch.Filter hiding (Record)
 import           QuickSearch.Find
 
