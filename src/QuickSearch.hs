@@ -6,7 +6,6 @@ module QuickSearch
   , batchMatchesWithCutoff
   , Token
   , UID
-  , Record
   , Score
   , Scorer
   , QuickSearch(QuickSearch)
