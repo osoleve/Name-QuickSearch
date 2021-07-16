@@ -35,7 +35,7 @@ buildTokenPartitions :: [Record] -> HMap.HashMap Token (HSet.HashSet UID)
 buildTokenPartitions = tokenPartitions . map (first getTokens)
 
 tokenPartitions :: [([Token], UID)] -> HMap.HashMap Token (HSet.HashSet UID)
-tokenPartitions entries = HMap.fromList [ (tok, allWith tok) | tok <- allTokens ]
+tokenPartitions entries = HMap.fromList [(tok, allWith tok) | tok <- allTokens]
  where
   allTokens = nub . concatMap fst $ entries
   allWith :: Token -> HSet.HashSet UID
