@@ -20,8 +20,6 @@ import qualified Data.Text          as T
 
 import           QuickSearch.Filter
 
-type Token = T.Text
-type UID = Int
 type Score = Int
 type Scorer = (T.Text -> T.Text -> Ratio Int)
 

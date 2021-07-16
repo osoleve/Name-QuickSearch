@@ -3,6 +3,9 @@
 module QuickSearch.Filter
   ( buildTokenPartitions
   , getSearchPartition
+  , Token
+  , UID
+  , Record
   )
 where
 
@@ -16,6 +19,7 @@ import qualified Data.Text         as T
 
 type UID = Int
 type Token = T.Text
+type Record = (T.Text, UID)
 
 getTokens :: T.Text -> [Token]
 getTokens = T.words . clean . T.toCaseFold
@@ -27,7 +31,7 @@ getTokens = T.words . clean . T.toCaseFold
   cleanChar c | any ($ c) [isLower, isDigit, isSpace, (`elem` toDelete)] = c
               | otherwise = ' '
 
-buildTokenPartitions :: [(T.Text, UID)] -> HMap.HashMap Token (HSet.HashSet UID)
+buildTokenPartitions :: [Record] -> HMap.HashMap Token (HSet.HashSet UID)
 buildTokenPartitions = tokenPartitions . map (first getTokens)
 
 tokenPartitions :: [([Token], UID)] -> HMap.HashMap Token (HSet.HashSet UID)

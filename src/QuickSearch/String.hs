@@ -8,6 +8,7 @@ module QuickSearch.String
   , batchMatchesWithCutoff
   , Token
   , UID
+  , Record
   , Score
   , Scorer
   , QuickSearch(QuickSearch)
@@ -23,44 +24,54 @@ import           QuickSearch        hiding (batchMatchesWithCutoff,
                                      batchTopNMatches, buildQuickSearch,
                                      matchesWithCutoff, oneShotBatchProcess,
                                      topNMatches)
-import           QuickSearch.Filter
+import           QuickSearch.Filter hiding (Record)
 import           QuickSearch.Find
 
-buildQuickSearch :: [(String, UID)] -> QuickSearch
+type Record = (String, UID)
+
+buildQuickSearch :: [Record] -> QuickSearch
 buildQuickSearch (map (first T.pack) -> entries) =
   let tokenFilter = buildTokenPartitions entries
   in  uncurry QuickSearch (unzip entries) tokenFilter
 
 topNMatches
-  :: QuickSearch -> Int -> Scorer -> String -> [(Score, (String, UID))]
+  :: QuickSearch -> Int -> Scorer -> String -> [(Score, Record)]
 topNMatches qs n scorer (T.pack -> entry) =
   let results             = take n (find entry qs scorer)
       resultsTextToString = map ((second . first) T.unpack)
   in  resultsTextToString results
 
 matchesWithCutoff
-  :: QuickSearch -> Int -> Scorer -> String -> [(Score, (String, UID))]
+  :: QuickSearch -> Int -> Scorer -> String -> [(Score, Record)]
 matchesWithCutoff qs cutoff scorer (T.pack -> entry) =
   let results             = find entry qs scorer
       resultsTextToString = map ((second . first) T.unpack)
   in  resultsTextToString . takeWhile ((>= cutoff) . fst) $ results
 
+
+batch
+  :: (QuickSearch -> Int -> Scorer -> String -> [(Score, Record)])
+  -> QuickSearch
+  -> Int
+  -> Scorer
+  -> [Record]
+  -> [(Record, [(Score, Record)])]
+batch f qs n scorer entries =
+  let results = map (f qs n scorer . fst) entries
+  in  zip entries results
+
 batchTopNMatches
   :: QuickSearch
   -> Int
-  -> (T.Text -> T.Text -> Ratio Int)
-  -> [(String, UID)]
-  -> [((String, UID), [(Score, (String, UID))])]
-batchTopNMatches qs n scorer entries =
-  let results = map (topNMatches qs n scorer . fst) entries
-  in  zip entries results
+  -> Scorer
+  -> [Record]
+  -> [(Record, [(Score, Record)])]
+batchTopNMatches = batch topNMatches
 
 batchMatchesWithCutoff
   :: QuickSearch
   -> Int
-  -> (T.Text -> T.Text -> Ratio Int)
-  -> [(String, UID)]
-  -> [((String, UID), [(Score, (String, UID))])]
-batchMatchesWithCutoff qs cutoff scorer entries =
-  let results = map (matchesWithCutoff qs cutoff scorer . fst) entries
-  in  zip entries results
+  -> Scorer
+  -> [Record]
+  -> [(Record, [(Score, Record)])]
+batchMatchesWithCutoff = batch matchesWithCutoff
