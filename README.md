@@ -57,12 +57,12 @@ import QuickSearch.OneShot
 names, targets :: [(T.Text, Int)]
 scorer :: (T.Text -> T.Text -> Ratio Int)
 
-> oneShotGetBestMatches names targets scorer
+> oneShotTopNMatches 5 names targets scorer
 ```
 which will return a list of `(entry, [(score, target)])`, where `target`s are the
 found names and their UIDs with the highest match score.
 
-`topNMatches` and `matchesWithCutoff` both have similar one-shot batch versions, named
+`topNMatches` and `matchesWithCutoff` have one-shot batch versions, named
 `oneShotTopNMatches` and `oneShotMatchesWithCutoff` respectively.
 
 Shout out to Charles Sommers, who wrote the original tool I'm reimplementing the idea of.
