@@ -6,6 +6,7 @@ module QuickSearch.String.OneShot
 where
 
 import           Data.Function
+import           Data.Hashable
 import           Data.List
 import           Data.Ratio
 import qualified Data.Text          as T
@@ -14,29 +15,31 @@ import           Data.Text.Metrics
 import           QuickSearch.String
 
 oneShot
-  :: (QuickSearch -> Int -> Scorer -> String -> [(Score, Record)])
+  :: (Hashable uid, Eq uid)
+  => (QuickSearch uid -> Int -> Scorer -> String -> [(Score, (String, uid))])
   -> Int
-  -> [Record]
-  -> [Record]
+  -> [(String, uid)]
+  -> [(String, uid)]
   -> Scorer
-  -> [(Record, [(Score, Record)])]
+  -> [((String, uid), [(Score, (String, uid))])]
 oneShot f n entries targets scorer =
-  let qs = buildQuickSearch targets
+  let qs      = buildQuickSearch targets
       results = map (f qs n scorer . fst) entries
   in  zip entries results
 
+
 oneShotTopNMatches
-  :: Int
-  -> [Record]
-  -> [Record]
+  :: (Hashable uid, Eq uid) => Int
+  -> [(String, uid)]
+  -> [(String, uid)]
   -> Scorer
-  -> [(Record, [(Score, Record)])]
+  -> [((String, uid), [(Score, (String, uid))])]
 oneShotTopNMatches = oneShot topNMatches
 
 oneShotMatchesWithCutoff
-  :: Int
-  -> [Record]
-  -> [Record]
+  :: (Hashable uid, Eq uid) => Int
+  -> [(String, uid)]
+  -> [(String, uid)]
   -> Scorer
-  -> [(Record, [(Score, Record)])]
+  -> [((String, uid), [(Score, (String, uid))])]
 oneShotMatchesWithCutoff = oneShot matchesWithCutoff
