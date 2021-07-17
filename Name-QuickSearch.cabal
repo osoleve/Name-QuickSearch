@@ -26,7 +26,7 @@ library
   exposed-modules:
       QuickSearch
       QuickSearch.Filter
-      QuickSearch.Find
+      QuickSearch.MatchAndScore
       QuickSearch.OneShot
       QuickSearch.String
       QuickSearch.String.OneShot
