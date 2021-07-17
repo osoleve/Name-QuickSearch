@@ -5,8 +5,6 @@ module QuickSearch
   , batchTopNMatches
   , batchMatchesWithCutoff
   , Token
-  , UID
-  , Record
   , Score
   , Scorer
   , QuickSearch(QuickSearch)
@@ -14,51 +12,52 @@ module QuickSearch
 where
 
 import           Data.List          hiding (find)
+import           Data.Hashable
 import           Data.Ratio
 import qualified Data.Text          as T
 import           Data.Text.Metrics  (damerauLevenshteinNorm, jaro, jaroWinkler)
 
 import           QuickSearch.Filter
-import           QuickSearch.Find
+import           QuickSearch.MatchAndScore
 
-buildQuickSearch :: [Record] -> QuickSearch
+buildQuickSearch :: (Hashable uid, Eq uid) => [(T.Text, uid)] -> QuickSearch uid
 buildQuickSearch entries =
   let tokenFilter = buildTokenPartitions entries
   in  uncurry QuickSearch (unzip entries) tokenFilter
 
 topNMatches
-  :: QuickSearch -> Int -> Scorer -> T.Text -> [(Score, Record)]
-topNMatches qs n scorer entry = take n (find entry qs scorer)
+  :: (Hashable uid, Eq uid) => QuickSearch uid -> Int -> Scorer -> T.Text -> [(Score, (T.Text, uid))]
+topNMatches qs n scorer entry = take n (scoreMatches entry qs scorer)
 
 matchesWithCutoff
-  :: QuickSearch -> Int -> Scorer -> T.Text -> [(Score, Record)]
+  :: (Hashable uid, Eq uid) => QuickSearch uid -> Int -> Scorer -> T.Text -> [(Score, (T.Text, uid))]
 matchesWithCutoff qs cutoff scorer entry =
-  let results = find entry qs scorer
+  let results = scoreMatches entry qs scorer
   in  takeWhile ((>= cutoff) . fst) results
 
 batch
-  :: (QuickSearch -> Int -> Scorer -> T.Text -> [(Score, Record)])
-  -> QuickSearch
+  :: (Hashable uid, Eq uid) => (QuickSearch uid -> Int -> Scorer -> T.Text -> [(Score, (T.Text, uid))])
+  -> QuickSearch uid
   -> Int
   -> Scorer
-  -> [Record]
-  -> [(Record, [(Score, Record)])]
+  -> [(T.Text, uid)]
+  -> [((T.Text, uid), [(Score, (T.Text, uid))])]
 batch f qs n scorer entries =
   let results = map (f qs n scorer . fst) entries
   in  zip entries results
 
 batchTopNMatches
-  :: QuickSearch
+  :: (Hashable uid, Eq uid) => QuickSearch uid
   -> Int
   -> Scorer
-  -> [Record]
-  -> [(Record, [(Score, Record)])]
+  -> [(T.Text, uid)]
+  -> [((T.Text, uid), [(Score, (T.Text, uid))])]
 batchTopNMatches = batch topNMatches
 
 batchMatchesWithCutoff
-  :: QuickSearch
+  :: (Hashable uid, Eq uid) => QuickSearch uid
   -> Int
   -> (T.Text -> T.Text -> Ratio Int)
-  -> [Record]
-  -> [(Record, [(Score, Record)])]
+  -> [(T.Text, uid)]
+  -> [((T.Text, uid), [(Score, (T.Text, uid))])]
 batchMatchesWithCutoff = batch matchesWithCutoff

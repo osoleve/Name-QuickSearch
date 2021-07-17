@@ -4,22 +4,19 @@ module QuickSearch.Filter
   ( buildTokenPartitions
   , getSearchPartition
   , Token
-  , UID
-  , Record
   )
 where
 
 import           Control.Arrow
 import           Data.Char
+import           Data.Hashable
 import qualified Data.HashMap.Lazy as HMap
 import qualified Data.HashSet      as HSet
 import           Data.List
 import           Data.Maybe
 import qualified Data.Text         as T
 
-type UID = Int
 type Token = T.Text
-type Record = (T.Text, UID)
 
 getTokens :: T.Text -> [Token]
 getTokens = T.words . clean . T.toCaseFold
@@ -31,19 +28,19 @@ getTokens = T.words . clean . T.toCaseFold
   cleanChar c | any ($ c) [isLower, isDigit, isSpace, (`elem` toDelete)] = c
               | otherwise = ' '
 
-buildTokenPartitions :: [Record] -> HMap.HashMap Token (HSet.HashSet UID)
+buildTokenPartitions :: (Hashable uid, Eq uid) => [(T.Text, uid)] -> HMap.HashMap Token (HSet.HashSet uid)
 buildTokenPartitions = tokenPartitions . map (first getTokens)
 
-tokenPartitions :: [([Token], UID)] -> HMap.HashMap Token (HSet.HashSet UID)
-tokenPartitions entries = HMap.fromList [(tok, allWith tok) | tok <- allTokens]
+tokenPartitions :: forall uid . (Hashable uid, Eq uid) => [([Token], uid)] -> HMap.HashMap Token (HSet.HashSet uid)
+tokenPartitions entries = HMap.fromList $ map (id &&& allWith) allTokens
  where
   allTokens = nub . concatMap fst $ entries
-  allWith :: Token -> HSet.HashSet UID
+  allWith :: (Hashable uid) => Token -> HSet.HashSet uid
   allWith token =
     HSet.fromList . map snd $ filter ((token `elem`) . fst) entries
 
 getSearchPartition
-  :: T.Text -> HMap.HashMap Token (HSet.HashSet UID) -> HSet.HashSet UID
+  :: (Hashable uid, Eq uid) => T.Text -> HMap.HashMap Token (HSet.HashSet uid) -> HSet.HashSet uid
 getSearchPartition name tokenMap =
   let tokens = getTokens name
-  in  HSet.unions $ map (fromMaybe HSet.empty . flip HMap.lookup tokenMap) tokens
+  in  HSet.unions $ map (fromMaybe HSet.empty . (`HMap.lookup` tokenMap)) tokens
