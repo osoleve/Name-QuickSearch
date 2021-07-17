@@ -18,14 +18,14 @@ import           QuickSearch
 -- Instead of creating a QuickSearch for reuse, this creates it in the
 -- background and discards it when done.
 oneShot
-  :: (Hashable uidA, Hashable uidB, Eq uidA, Eq uidB)
-  => (QuickSearch uidB -> Int -> Scorer -> T.Text -> [Scored (Entry uidB)])
+  :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2)
+  => (QuickSearch uid2 -> Int -> Scorer -> T.Text -> [Scored (Entry uid2)])
   -- ^ Match retrieval function to be converted into a one-shot
   -> Int -- ^ The reference number for the match retrieval function.
-  -> [Entry uidA] -- ^ List of entries to be processed
-  -> [Entry uidB] -- ^ List of entries making up the search space
+  -> [Entry uid1] -- ^ List of entries to be processed
+  -> [Entry uid2] -- ^ List of entries making up the search space
   -> Scorer -- ^ Similarity function with type (Text -> Text -> Ratio Int)
-  -> [(Entry uidA, [Scored (Entry uidB)])]
+  -> [(Entry uid1, [Scored (Entry uid2)])]
     -- ^ List of entries and their matches.
 oneShot f n entries targets scorer =
   let qs      = buildQuickSearch targets
@@ -35,23 +35,23 @@ oneShot f n entries targets scorer =
 -- | One-shot version of topNMatches. Builds the QuickSearch in the background
 -- and discards it when finished.
 oneShotTopNMatches
-  :: (Hashable uidA, Hashable uidB, Eq uidA, Eq uidB)
+  :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2)
   => Int -- ^ N: Number of matches to return
-  -> [Entry uidA] -- ^ List of entries to be processed
-  -> [Entry uidB] -- ^ List of entries making up the search space
+  -> [Entry uid1] -- ^ List of entries to be processed
+  -> [Entry uid2] -- ^ List of entries making up the search space
   -> Scorer -- ^ Similarity function with type (Text -> Text -> Ratio Int)
-  -> [(Entry uidA, [Scored (Entry uidB)])]
+  -> [(Entry uid1, [Scored (Entry uid2)])]
   -- ^ List of entries and up to N of the best matches.
 oneShotTopNMatches = oneShot topNMatches
 
 -- | One-shot version of matchesWithThreshold. Builds the QuickSearch in
 -- the background and discards it when finished.
 oneShotMatchesWithThreshold
-  :: (Hashable uidA, Hashable uidB, Eq uidA, Eq uidB)
+  :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2)
   => Int -- ^ Score threshold above which to return matches
-  -> [Entry uidA] -- ^ List of entries to be processed
-  -> [Entry uidB] -- ^ List of entries making up the search space
+  -> [Entry uid1] -- ^ List of entries to be processed
+  -> [Entry uid2] -- ^ List of entries making up the search space
   -> Scorer -- ^ Similarity function with type (Text -> Text -> Ratio Int)
-  -> [(Entry uidA, [Scored (Entry uidB)])]
+  -> [(Entry uid1, [Scored (Entry uid2)])]
   -- ^ List of entries and their matches above the score threshold.
 oneShotMatchesWithThreshold = oneShot matchesWithThreshold
