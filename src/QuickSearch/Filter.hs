@@ -1,5 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module QuickSearch.Filter
   ( buildTokenPartitions
   , getSearchPartition
@@ -35,7 +33,7 @@ buildTokenPartitions :: [Record] -> HMap.HashMap Token (HSet.HashSet UID)
 buildTokenPartitions = tokenPartitions . map (first getTokens)
 
 tokenPartitions :: [([Token], UID)] -> HMap.HashMap Token (HSet.HashSet UID)
-tokenPartitions entries = HMap.fromList [(tok, allWith tok) | tok <- allTokens]
+tokenPartitions entries = HMap.fromList $ map (id &&& allWith) allTokens
  where
   allTokens = nub . concatMap fst $ entries
   allWith :: Token -> HSet.HashSet UID
@@ -46,4 +44,4 @@ getSearchPartition
   :: T.Text -> HMap.HashMap Token (HSet.HashSet UID) -> HSet.HashSet UID
 getSearchPartition name tokenMap =
   let tokens = getTokens name
-  in  HSet.unions $ map (fromMaybe HSet.empty . flip HMap.lookup tokenMap) tokens
+  in  HSet.unions $ map (fromMaybe HSet.empty . (`HMap.lookup` tokenMap)) tokens

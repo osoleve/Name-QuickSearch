@@ -37,14 +37,14 @@ buildQuickSearch (map (first T.pack) -> entries) =
 topNMatches
   :: QuickSearch -> Int -> Scorer -> String -> [(Score, Record)]
 topNMatches qs n scorer (T.pack -> entry) =
-  let results             = take n (find entry qs scorer)
+  let results             = take n (scoreMatches entry qs scorer)
       resultsTextToString = map ((second . first) T.unpack)
   in  resultsTextToString results
 
 matchesWithCutoff
   :: QuickSearch -> Int -> Scorer -> String -> [(Score, Record)]
 matchesWithCutoff qs cutoff scorer (T.pack -> entry) =
-  let results             = find entry qs scorer
+  let results             = scoreMatches entry qs scorer
       resultsTextToString = map ((second . first) T.unpack)
   in  resultsTextToString . takeWhile ((>= cutoff) . fst) $ results
 

@@ -1,7 +1,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module QuickSearch.Find
-  ( find
+  ( scoreMatches
   , Token
   , UID
   , Score
@@ -29,14 +29,17 @@ data QuickSearch = QuickSearch
   , getTokenFilter :: HMap.HashMap Token (HSet.HashSet UID)
   }
 
-find :: T.Text -> QuickSearch -> Scorer -> [(Score, (T.Text, UID))]
-find (T.toCaseFold -> entry) (QuickSearch names uids tokenFilter) scorer =
+scoreMatches :: T.Text -> QuickSearch -> Scorer -> [(Score, Record)]
+scoreMatches (T.toCaseFold -> entry) qs scorer =
+  let searchSpace = map (first T.toCaseFold) $ pruneSearchSpace entry qs
+      results = map (toPercent . scorer entry . fst &&& id) searchSpace
+  in  sortOn (Down . fst) results
+
+pruneSearchSpace :: T.Text -> QuickSearch -> [Record]
+pruneSearchSpace entry (QuickSearch names uids tokenFilter) =
   let entries      = zip names uids
       uidPartition = getSearchPartition entry tokenFilter
-      searchSpace  = filter ((`HSet.member` uidPartition) . snd) entries
-      results =
-        map (toPercent . scorer entry . T.toCaseFold . fst &&& id) searchSpace
-  in  sortOn (Down . fst) results
+  in filter ((`HSet.member` uidPartition) . snd) entries
 
 toPercent :: Ratio Int -> Int
 toPercent r = floor $ (num / denom) * 100

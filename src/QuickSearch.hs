@@ -28,12 +28,12 @@ buildQuickSearch entries =
 
 topNMatches
   :: QuickSearch -> Int -> Scorer -> T.Text -> [(Score, Record)]
-topNMatches qs n scorer entry = take n (find entry qs scorer)
+topNMatches qs n scorer entry = take n (scoreMatches entry qs scorer)
 
 matchesWithCutoff
   :: QuickSearch -> Int -> Scorer -> T.Text -> [(Score, Record)]
 matchesWithCutoff qs cutoff scorer entry =
-  let results = find entry qs scorer
+  let results = scoreMatches entry qs scorer
   in  takeWhile ((>= cutoff) . fst) results
 
 batch
