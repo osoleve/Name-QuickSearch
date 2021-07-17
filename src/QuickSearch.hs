@@ -57,37 +57,37 @@ matchesWithThreshold qs cutoff scorer entry =
 
 -- | Turn a match retrieval function into one that works on lists of entries.
 batch
-  :: (Hashable uid, Eq uid)
-  => (QuickSearch uid -> Int -> Scorer -> T.Text -> [(Score, (T.Text, uid))])
+  :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2)
+  => (QuickSearch uid2 -> Int -> Scorer -> T.Text -> [Scored (Entry uid2)])
   -- ^ A match retrieval function, such as topNMatches
-  -> QuickSearch uid -- ^ QuickSearch object holding token partitions
+  -> QuickSearch uid2 -- ^ QuickSearch object holding token partitions
   -> Int -- ^ The reference number for the match retrieval function.
          -- N for topNMatches, threshold for matchesWithThreshold
   -> Scorer -- ^ String similarity function of type (Text -> Text -> Ratio Int)
-  -> [Entry uid] -- ^ List of entries to be processed
-  -> [(Entry uid, [Scored (Entry uid)])]
+  -> [Entry uid1] -- ^ List of entries to be processed
+  -> [(Entry uid1, [Scored (Entry uid2)])]
   -- ^ List of entries and the results returned for each.
 batch f qs n scorer entries =
   let results = map (f qs n scorer . fst) entries in zip entries results
 
 -- | Version of topNMatches that processes lists of entries instead of strings.
 batchTopNMatches
-  :: (Hashable uid, Eq uid)
-  => QuickSearch uid -- ^ QuickSearch object holding token partitions
+  :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2)
+  => QuickSearch uid2 -- ^ QuickSearch object holding token partitions
   -> Int -- ^ N: Number of results to return
   -> Scorer -- ^ String similarity function of type (Text -> Text -> Ratio Int)
-  -> [Entry uid] -- ^ List of entries to be processed
-  -> [(Entry uid, [Scored (Entry uid)])]
+  -> [Entry uid1] -- ^ List of entries to be processed
+  -> [(Entry uid1, [Scored (Entry uid2)])]
   -- ^ List of entries and up to the top N matches for each.
 batchTopNMatches = batch topNMatches
 
 -- | Version of matchesWithThreshold that processes lists of entries instead of strings.
 batchMatchesWithThreshold
-  :: (Hashable uid, Eq uid)
-  => QuickSearch uid -- ^ QuickSearch object holding token partitions
+  :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2)
+  => QuickSearch uid2 -- ^ QuickSearch object holding token partitions
   -> Int -- ^ N: Number of results to return
   -> Scorer -- ^ String similarity function of type (Text -> Text -> Ratio Int)
-  -> [Entry uid] -- ^ List of entries to be processed
-  -> [(Entry uid, [Scored (Entry uid)])]
+  -> [Entry uid1] -- ^ List of entries to be processed
+  -> [(Entry uid1, [Scored (Entry uid2)])]
   -- ^ List of entries and their matches above the score threshold.
 batchMatchesWithThreshold = batch matchesWithThreshold
