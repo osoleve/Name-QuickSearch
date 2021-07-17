@@ -46,6 +46,7 @@ topNMatches qs n scorer (T.pack -> entry) =
   let results             = take n (scoreMatches entry qs scorer)
       resultsTextToString = map ((second . first) T.unpack)
   in  resultsTextToString results
+  
 -- | Given a QuickSearch object, scorer, and string, return all matches with a
 -- score greater than the given threshold.
 matchesWithThreshold
