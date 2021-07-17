@@ -4,6 +4,7 @@ module QuickSearch.Filter
   ( buildTokenPartitions
   , getSearchPartition
   , Token
+  , Entry
   )
 where
 
@@ -16,6 +17,7 @@ import           Data.List
 import           Data.Maybe
 import qualified Data.Text         as T
 
+type Entry uid = (T.Text, uid)
 type Token = T.Text
 
 -- | Turn a Data.Text.Text string into a list of casefolded tokens
@@ -36,7 +38,7 @@ getTokens = T.words . clean . T.toCaseFold
 -- HashMap value is the list of uids of entries containing the token.
 buildTokenPartitions
   :: (Hashable uid, Eq uid)
-  => [(T.Text, uid)] -- ^ List of entries
+  => [Entry uid] -- ^ List of entries
   -> HMap.HashMap Token (HSet.HashSet uid) -- ^ A map of Token -> [uids]
 buildTokenPartitions = tokenPartitions . map (first getTokens)
 
@@ -59,8 +61,8 @@ tokenPartitions entries = HMap.fromList $ map (id &&& allWith) allTokens
 getSearchPartition
   :: (Hashable uid, Eq uid)
   => T.Text -- ^ Target string
-  -> HMap.HashMap Token (HSet.HashSet uid) -- ^ HashMap associating tokens
-                                           -- with sets of uids
+  -> HMap.HashMap Token (HSet.HashSet uid)
+  -- ^ HashMap associating tokens with sets of uids
   -> HSet.HashSet uid -- ^ The union of sets of associated uids.
 getSearchPartition name tokenMap =
   let tokens = getTokens name

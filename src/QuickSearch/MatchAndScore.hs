@@ -5,6 +5,7 @@ module QuickSearch.MatchAndScore
   , Token
   , Score
   , Scorer
+  , Scored
   , QuickSearch(QuickSearch)
   )
 where
@@ -13,7 +14,7 @@ import           Control.Arrow
 import           Data.Hashable
 import qualified Data.HashMap.Lazy  as HMap
 import qualified Data.HashSet       as HSet
-import           Data.List          (sortOn)
+import           Data.List          (sortBy)
 import           Data.Ord
 import           Data.Ratio
 import qualified Data.Text          as T
@@ -22,6 +23,7 @@ import           QuickSearch.Filter
 
 type Score = Int
 type Scorer = (T.Text -> T.Text -> Ratio Int)
+type Scored a = (Score, a)
 
 data QuickSearch uid = QuickSearch
   { getNames       :: [T.Text]
@@ -40,18 +42,18 @@ scoreMatches
   => T.Text -- ^ Name or other string to be searched
   -> QuickSearch uid -- ^ The QuickSearch object to be used
   -> Scorer -- ^ A string distance function of type (Text -> Text -> Ratio Int)
-  -> [(Score, (T.Text, uid))] -- ^ A list of possible matches and their scores
+  -> [Scored (Entry uid)] -- ^ A list of possible matches and their scores
 scoreMatches (T.toCaseFold -> entry) qs scorer =
   let searchSpace = map (first T.toCaseFold) $ pruneSearchSpace entry qs
       results     = map (toPercent . scorer entry . fst &&& id) searchSpace
-  in  sortOn (Down . fst) results
+  in  sortBy (comparing (Down . fst)) results
 
 -- | Given a string and a QuickSearch object, return the list of entries
 -- from within the QuickSearch that share a full token with the target string
 pruneSearchSpace
   :: (Hashable uid, Eq uid) => T.Text -- ^ Name or other string to be searched
   -> QuickSearch uid -- ^ The QuickSearch object to be used
-  -> [(T.Text, uid)] -- ^ A list of strings to search through and their UIDs
+  -> [Entry uid] -- ^ A list of strings to search through and their UIDs
 pruneSearchSpace entry (QuickSearch names uids tokenFilter) =
   let entries      = zip names uids
       uidPartition = getSearchPartition entry tokenFilter
