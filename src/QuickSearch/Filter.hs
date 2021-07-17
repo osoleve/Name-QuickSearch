@@ -51,7 +51,9 @@ tokenPartitions
   -> HMap.HashMap Token (HSet.HashSet uid) -- ^ A map of Token -> [uids]
 tokenPartitions entries = HMap.fromList $ map (id &&& allWith) allTokens
  where
-  allTokens = nub . concatMap fst $ entries
+  unstableNub :: (Eq a, Hashable a) => [a] -> [a]
+  unstableNub = HSet.toList . HSet.fromList
+  allTokens = unstableNub . concatMap fst $ entries
   allWith :: (Hashable uid) => Token -> HSet.HashSet uid
   allWith token =
     HSet.fromList . map snd $ filter ((token `elem`) . fst) entries
