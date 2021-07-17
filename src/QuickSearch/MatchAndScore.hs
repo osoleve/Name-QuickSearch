@@ -1,9 +1,8 @@
 {-# LANGUAGE ViewPatterns #-}
 
-module QuickSearch.Find
+module QuickSearch.MatchAndScore
   ( scoreMatches
   , Token
-  , UID
   , Score
   , Scorer
   , QuickSearch(QuickSearch)
@@ -11,6 +10,7 @@ module QuickSearch.Find
 where
 
 import           Control.Arrow
+import           Data.Hashable
 import qualified Data.HashMap.Lazy  as HMap
 import qualified Data.HashSet       as HSet
 import           Data.List          (sortOn)
@@ -23,19 +23,19 @@ import           QuickSearch.Filter
 type Score = Int
 type Scorer = (T.Text -> T.Text -> Ratio Int)
 
-data QuickSearch = QuickSearch
+data QuickSearch uid = QuickSearch
   { getNames       :: [T.Text]
-  , getUIDs        :: [UID]
-  , getTokenFilter :: HMap.HashMap Token (HSet.HashSet UID)
+  , getuids        :: [uid]
+  , getTokenFilter :: HMap.HashMap Token (HSet.HashSet uid)
   }
 
-scoreMatches :: T.Text -> QuickSearch -> Scorer -> [(Score, Record)]
+scoreMatches :: (Hashable uid, Eq uid) => T.Text -> QuickSearch uid -> Scorer -> [(Score, (T.Text, uid))]
 scoreMatches (T.toCaseFold -> entry) qs scorer =
   let searchSpace = map (first T.toCaseFold) $ pruneSearchSpace entry qs
       results = map (toPercent . scorer entry . fst &&& id) searchSpace
   in  sortOn (Down . fst) results
 
-pruneSearchSpace :: T.Text -> QuickSearch -> [Record]
+pruneSearchSpace :: (Hashable uid, Eq uid) => T.Text -> QuickSearch uid -> [(T.Text, uid)]
 pruneSearchSpace entry (QuickSearch names uids tokenFilter) =
   let entries      = zip names uids
       uidPartition = getSearchPartition entry tokenFilter
