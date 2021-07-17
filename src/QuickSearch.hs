@@ -26,25 +26,36 @@ buildQuickSearch entries =
   in  uncurry QuickSearch (unzip entries) tokenFilter
 
 topNMatches
-  :: (Hashable uid, Eq uid) => QuickSearch uid -> Int -> Scorer -> T.Text -> [(Score, (T.Text, uid))]
+  :: (Hashable uid, Eq uid)
+  => QuickSearch uid
+  -> Int
+  -> Scorer
+  -> T.Text
+  -> [(Score, (T.Text, uid))]
 topNMatches qs n scorer entry = take n (scoreMatches entry qs scorer)
 
 matchesWithCutoff
-  :: (Hashable uid, Eq uid) => QuickSearch uid -> Int -> Scorer -> T.Text -> [(Score, (T.Text, uid))]
+  :: (Hashable uid, Eq uid)
+  => QuickSearch uid
+  -> Int
+  -> Scorer
+  -> T.Text
+  -> [(Score, (T.Text, uid))]
 matchesWithCutoff qs cutoff scorer entry =
   let results = scoreMatches entry qs scorer
   in  takeWhile ((>= cutoff) . fst) results
 
 batch
-  :: (Hashable uid, Eq uid) => (QuickSearch uid -> Int -> Scorer -> T.Text -> [(Score, (T.Text, uid))])
+  :: (Hashable uid, Eq uid)
+  => (QuickSearch uid -> Int -> Scorer -> T.Text -> [(Score, (T.Text, uid))])
   -> QuickSearch uid
   -> Int
   -> Scorer
   -> [(T.Text, uid)]
   -> [((T.Text, uid), [(Score, (T.Text, uid))])]
 batch f qs n scorer entries =
-  let results = map (f qs n scorer . fst) entries
-  in  zip entries results
+  let results = map (f qs n scorer . fst) entries in zip entries results
+
 
 batchTopNMatches
   :: (Hashable uid, Eq uid) => QuickSearch uid

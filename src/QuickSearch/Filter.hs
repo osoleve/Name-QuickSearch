@@ -28,10 +28,17 @@ getTokens = T.words . clean . T.toCaseFold
   cleanChar c | any ($ c) [isLower, isDigit, isSpace, (`elem` toDelete)] = c
               | otherwise = ' '
 
-buildTokenPartitions :: (Hashable uid, Eq uid) => [(T.Text, uid)] -> HMap.HashMap Token (HSet.HashSet uid)
+buildTokenPartitions
+  :: (Hashable uid, Eq uid)
+  => [(T.Text, uid)]
+  -> HMap.HashMap Token (HSet.HashSet uid)
 buildTokenPartitions = tokenPartitions . map (first getTokens)
 
-tokenPartitions :: forall uid . (Hashable uid, Eq uid) => [([Token], uid)] -> HMap.HashMap Token (HSet.HashSet uid)
+tokenPartitions
+  :: forall uid
+   . (Hashable uid, Eq uid)
+  => [([Token], uid)]
+  -> HMap.HashMap Token (HSet.HashSet uid)
 tokenPartitions entries = HMap.fromList $ map (id &&& allWith) allTokens
  where
   allTokens = nub . concatMap fst $ entries
@@ -40,7 +47,10 @@ tokenPartitions entries = HMap.fromList $ map (id &&& allWith) allTokens
     HSet.fromList . map snd $ filter ((token `elem`) . fst) entries
 
 getSearchPartition
-  :: (Hashable uid, Eq uid) => T.Text -> HMap.HashMap Token (HSet.HashSet uid) -> HSet.HashSet uid
+  :: (Hashable uid, Eq uid)
+  => T.Text
+  -> HMap.HashMap Token (HSet.HashSet uid)
+  -> HSet.HashSet uid
 getSearchPartition name tokenMap =
   let tokens = getTokens name
   in  HSet.unions $ map (fromMaybe HSet.empty . (`HMap.lookup` tokenMap)) tokens

@@ -29,17 +29,23 @@ data QuickSearch uid = QuickSearch
   , getTokenFilter :: HMap.HashMap Token (HSet.HashSet uid)
   }
 
-scoreMatches :: (Hashable uid, Eq uid) => T.Text -> QuickSearch uid -> Scorer -> [(Score, (T.Text, uid))]
+scoreMatches
+  :: (Hashable uid, Eq uid)
+  => T.Text
+  -> QuickSearch uid
+  -> Scorer
+  -> [(Score, (T.Text, uid))]
 scoreMatches (T.toCaseFold -> entry) qs scorer =
   let searchSpace = map (first T.toCaseFold) $ pruneSearchSpace entry qs
-      results = map (toPercent . scorer entry . fst &&& id) searchSpace
+      results     = map (toPercent . scorer entry . fst &&& id) searchSpace
   in  sortOn (Down . fst) results
 
-pruneSearchSpace :: (Hashable uid, Eq uid) => T.Text -> QuickSearch uid -> [(T.Text, uid)]
+pruneSearchSpace
+  :: (Hashable uid, Eq uid) => T.Text -> QuickSearch uid -> [(T.Text, uid)]
 pruneSearchSpace entry (QuickSearch names uids tokenFilter) =
   let entries      = zip names uids
       uidPartition = getSearchPartition entry tokenFilter
-  in filter ((`HSet.member` uidPartition) . snd) entries
+  in  filter ((`HSet.member` uidPartition) . snd) entries
 
 toPercent :: Ratio Int -> Int
 toPercent r = floor $ (num / denom) * 100
