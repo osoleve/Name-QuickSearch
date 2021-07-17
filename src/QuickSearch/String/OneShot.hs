@@ -19,13 +19,13 @@ import           QuickSearch.String
 -- background and discards it when done.
 oneShot
   :: (Hashable uid, Eq uid)
-  => (QuickSearch uid -> Int -> Scorer -> String -> [(Score, (String, uid))])
+  => (QuickSearch uid -> Int -> Scorer -> String -> [Scored (Entry uid)])
   -- ^ Match retrieval function to be converted into a one-shot
   -> Int -- ^ The reference number for the match retrieval function.
-  -> [(String, uid)] -- ^ List of entries to be processed
-  -> [(String, uid)] -- ^ List of entries making up the search space
+  -> [Entry uid] -- ^ List of entries to be processed
+  -> [Entry uid] -- ^ List of entries making up the search space
   -> Scorer -- ^ Similarity function with type (Text -> Text -> Ratio Int)
-  -> [((String, uid), [(Score, (String, uid))])]
+  -> [(Entry uid, [Scored (Entry uid)])]
     -- ^ List of entries and their matches.
 oneShot f n entries targets scorer =
   let qs      = buildQuickSearch targets
@@ -37,10 +37,10 @@ oneShot f n entries targets scorer =
 oneShotTopNMatches
   :: (Hashable uid, Eq uid)
   => Int -- ^ N: Number of matches to return
-  -> [(String, uid)] -- ^ List of entries to be processed
-  -> [(String, uid)] -- ^ List of entries making up the search space
+  -> [Entry uid] -- ^ List of entries to be processed
+  -> [Entry uid] -- ^ List of entries making up the search space
   -> Scorer -- ^ Similarity function with type (Text -> Text -> Ratio Int)
-  -> [((String, uid), [(Score, (String, uid))])]
+  -> [(Entry uid, [Scored (Entry uid)])]
   -- ^ List of entries and up to N of the best matches.
 oneShotTopNMatches = oneShot topNMatches
 
@@ -49,9 +49,9 @@ oneShotTopNMatches = oneShot topNMatches
 oneShotMatchesWithThreshold
   :: (Hashable uid, Eq uid)
   => Int -- ^ Score threshold above which to return matches
-  -> [(String, uid)] -- ^ List of entries to be processed
-  -> [(String, uid)] -- ^ List of entries making up the search space
+  -> [Entry uid] -- ^ List of entries to be processed
+  -> [Entry uid] -- ^ List of entries making up the search space
   -> Scorer -- ^ Similarity function with type (Text -> Text -> Ratio Int)
-  -> [((String, uid), [(Score, (String, uid))])]
+  -> [(Entry uid, [Scored (Entry uid)])]
   -- ^ List of entries and their matches above the score threshold.
 oneShotMatchesWithThreshold = oneShot matchesWithThreshold

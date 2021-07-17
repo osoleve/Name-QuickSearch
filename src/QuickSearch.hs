@@ -2,11 +2,14 @@ module QuickSearch
   ( buildQuickSearch
   , matchesWithThreshold
   , topNMatches
+  , batch
   , batchTopNMatches
   , batchMatchesWithThreshold
   , Token
   , Score
   , Scorer
+  , Entry
+  , Scored
   , QuickSearch(QuickSearch)
   )
 where
@@ -23,7 +26,7 @@ import           QuickSearch.MatchAndScore
 -- | Given a list of entries to be searched, create a QuickSearch object.
 buildQuickSearch
   :: (Hashable uid, Eq uid)
-  => [(T.Text, uid)] -- ^ List of entries to be searched
+  => [Entry uid] -- ^ List of entries to be searched
   -> QuickSearch uid -- ^ QuickSearch object holding token partitions
 buildQuickSearch entries =
   let tokenFilter = buildTokenPartitions entries
@@ -36,7 +39,7 @@ topNMatches
   -> Int -- ^ N: Number of results to return
   -> Scorer -- ^ String similarity function of type (Text -> Text -> Ratio Int)
   -> T.Text -- ^ String to be searched
-  -> [(Score, (T.Text, uid))] -- ^ Top N most similar entries
+  -> [Scored (Entry uid)] -- ^ Top N most similar entries
 topNMatches qs n scorer entry = take n (scoreMatches entry qs scorer)
 
 -- | Given a QuickSearch object, scorer, and string, return all matches with a
@@ -47,7 +50,7 @@ matchesWithThreshold
   -> Int -- ^ Threshold score above which to return results
   -> Scorer -- ^ String similarity function of type (Text -> Text -> Ratio Int)
   -> T.Text -- ^ String to be searched
-  -> [(Score, (T.Text, uid))] -- ^ Top N most similar entries
+  -> [Scored (Entry uid)] -- ^ Top N most similar entries
 matchesWithThreshold qs cutoff scorer entry =
   let results = scoreMatches entry qs scorer
   in  takeWhile ((>= cutoff) . fst) results
@@ -61,8 +64,8 @@ batch
   -> Int -- ^ The reference number for the match retrieval function.
          -- N for topNMatches, threshold for matchesWithThreshold
   -> Scorer -- ^ String similarity function of type (Text -> Text -> Ratio Int)
-  -> [(T.Text, uid)] -- ^ List of entries to be processed
-  -> [((T.Text, uid), [(Score, (T.Text, uid))])]
+  -> [Entry uid] -- ^ List of entries to be processed
+  -> [(Entry uid, [Scored (Entry uid)])]
   -- ^ List of entries and the results returned for each.
 batch f qs n scorer entries =
   let results = map (f qs n scorer . fst) entries in zip entries results
@@ -73,8 +76,8 @@ batchTopNMatches
   => QuickSearch uid -- ^ QuickSearch object holding token partitions
   -> Int -- ^ N: Number of results to return
   -> Scorer -- ^ String similarity function of type (Text -> Text -> Ratio Int)
-  -> [(T.Text, uid)] -- ^ List of entries to be processed
-  -> [((T.Text, uid), [(Score, (T.Text, uid))])]
+  -> [Entry uid] -- ^ List of entries to be processed
+  -> [(Entry uid, [Scored (Entry uid)])]
   -- ^ List of entries and up to the top N matches for each.
 batchTopNMatches = batch topNMatches
 
@@ -84,7 +87,7 @@ batchMatchesWithThreshold
   => QuickSearch uid -- ^ QuickSearch object holding token partitions
   -> Int -- ^ N: Number of results to return
   -> Scorer -- ^ String similarity function of type (Text -> Text -> Ratio Int)
-  -> [(T.Text, uid)] -- ^ List of entries to be processed
-  -> [((T.Text, uid), [(Score, (T.Text, uid))])]
+  -> [Entry uid] -- ^ List of entries to be processed
+  -> [(Entry uid, [Scored (Entry uid)])]
   -- ^ List of entries and their matches above the score threshold.
 batchMatchesWithThreshold = batch matchesWithThreshold
