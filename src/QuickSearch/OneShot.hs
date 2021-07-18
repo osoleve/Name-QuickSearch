@@ -29,7 +29,7 @@ oneShot
     -- ^ List of entries and their matches.
 oneShot f n entries targets scorer =
   let qs      = buildQuickSearch targets
-      results = map (f qs n scorer . fst) entries
+      results = map (f qs n scorer . entryName) entries
   in  zip entries results
 
 -- | One-shot version of topNMatches. Builds the QuickSearch in the background
