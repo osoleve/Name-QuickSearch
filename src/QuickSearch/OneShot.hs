@@ -22,23 +22,23 @@ oneShot
   => (QuickSearch uid2 -> Int -> Scorer -> T.Text -> [Scored (Entry uid2)])
   -- ^ Match retrieval function to be converted into a one-shot
   -> Int -- ^ The reference number for the match retrieval function.
-  -> [Entry uid1] -- ^ List of entries to be processed
-  -> [Entry uid2] -- ^ List of entries making up the search space
+  -> [(T.Text, uid1)] -- ^ List of entries to be processed
+  -> [(T.Text, uid2)] -- ^ List of entries making up the search space
   -> Scorer -- ^ Similarity function with type (Text -> Text -> Ratio Int)
   -> [(Entry uid1, [Scored (Entry uid2)])]
     -- ^ List of entries and their matches.
 oneShot f n entries targets scorer =
   let qs      = buildQuickSearch targets
       results = map (f qs n scorer . fst) entries
-  in  zip entries results
+  in  zip (map (uncurry Entry) entries) results
 
 -- | One-shot version of topNMatches. Builds the QuickSearch in the background
 -- and discards it when finished.
 oneShotTopNMatches
   :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2)
   => Int -- ^ N: Number of matches to return
-  -> [Entry uid1] -- ^ List of entries to be processed
-  -> [Entry uid2] -- ^ List of entries making up the search space
+  -> [(T.Text, uid1)] -- ^ List of entries to be processed
+  -> [(T.Text, uid2)] -- ^ List of entries making up the search space
   -> Scorer -- ^ Similarity function with type (Text -> Text -> Ratio Int)
   -> [(Entry uid1, [Scored (Entry uid2)])]
   -- ^ List of entries and up to N of the best matches.
@@ -49,8 +49,8 @@ oneShotTopNMatches = oneShot topNMatches
 oneShotMatchesWithThreshold
   :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2)
   => Int -- ^ Score threshold above which to return matches
-  -> [Entry uid1] -- ^ List of entries to be processed
-  -> [Entry uid2] -- ^ List of entries making up the search space
+  -> [(T.Text, uid1)] -- ^ List of entries to be processed
+  -> [(T.Text, uid2)] -- ^ List of entries making up the search space
   -> Scorer -- ^ Similarity function with type (Text -> Text -> Ratio Int)
   -> [(Entry uid1, [Scored (Entry uid2)])]
   -- ^ List of entries and their matches above the score threshold.

@@ -33,7 +33,6 @@ Usage:
 > names = ["Rep. Meg Mueller","Twana Jacobs","Sammie Paucek"]
 
 > targets = zip names [1..] --Stand-in for your UIDs
-
 > qs = buildQuickSearch targets
 
 -- Scorer can be any func of type (T.Text -> T.Text -> Ratio Int)
@@ -74,8 +73,7 @@ scorer :: (T.Text -> T.Text -> Ratio Int)
 
 > oneShotTopNMatches 5 names targets scorer
 ```
-which will return a list of `(entry, [(score, target)])`, where `target`s
-are the found names and their UIDs with the highest match score.
+which will return a list of `(Entry uid1, Scored (Entry uid2))`
 
 `topNMatches` and `matchesWithThreshold` have one-shot batch versions, named
 `oneShotTopNMatches` and `oneShotMatchesWithThreshold` respectively. Like the

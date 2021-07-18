@@ -4,11 +4,12 @@ module QuickSearch.Filter
   ( buildTokenPartitions
   , getSearchPartition
   , Token
-  , Entry
+  , Entry(..)
+  , first
   )
 where
 
-import           Control.Arrow
+import           Control.Arrow hiding (first, second)
 import           Data.Char
 import           Data.Hashable
 import qualified Data.HashMap.Lazy as HMap
@@ -17,8 +18,19 @@ import           Data.List
 import           Data.Maybe
 import qualified Data.Text         as T
 
-type Entry uid = (T.Text, uid)
 type Token = T.Text
+
+data Entry uid = Entry {
+    entryName :: T.Text
+  , entryUID :: uid
+} deriving (Show)
+
+first :: (T.Text -> T.Text) -> Entry uid -> Entry uid
+first f entry = Entry (f . entryName $ entry) (entryUID entry)
+
+toTokenizedTuple :: (Hashable uid, Eq uid) => Entry uid -> ([Token], uid)
+toTokenizedTuple = getTokens . entryName &&& entryUID
+
 
 -- | Turn a Data.Text.Text string into a list of casefolded tokens
 getTokens
@@ -40,7 +52,7 @@ buildTokenPartitions
   :: (Hashable uid, Eq uid)
   => [Entry uid] -- ^ List of entries
   -> HMap.HashMap Token (HSet.HashSet uid) -- ^ A map of Token -> [uids]
-buildTokenPartitions = tokenPartitions . map (first getTokens)
+buildTokenPartitions = tokenPartitions . map toTokenizedTuple
 
 -- | Given a list of tokenized entries to be held by QuickSearch,
 -- return a HashMap keyed on the set of distinct tokens where the associated

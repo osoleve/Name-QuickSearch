@@ -8,9 +8,9 @@ module QuickSearch
   , Token
   , Score
   , Scorer
-  , Entry
-  , Scored
-  , QuickSearch(QuickSearch)
+  , Entry(..)
+  , Scored(..)
+  , QuickSearch(..)
   )
 where
 
@@ -24,13 +24,24 @@ import           QuickSearch.Filter
 import           QuickSearch.MatchAndScore
 
 -- | Given a list of entries to be searched, create a QuickSearch object.
-buildQuickSearch
+rawBuildQuickSearch
   :: (Hashable uid, Eq uid)
   => [Entry uid] -- ^ List of entries to be searched
   -> QuickSearch uid -- ^ QuickSearch object holding token partitions
-buildQuickSearch entries =
+rawBuildQuickSearch entries =
   let tokenFilter = buildTokenPartitions entries
-  in  uncurry QuickSearch (unzip entries) tokenFilter
+  in  QuickSearch entries tokenFilter
+
+-- | Given a list of pairs of (T.Text, uid) to be searched,
+-- create a QuickSearch object.
+buildQuickSearch
+  :: (Hashable uid, Eq uid)
+  => [(T.Text, uid)] -- ^ List of entries to be searched
+  -> QuickSearch uid -- ^ QuickSearch object holding token partitions
+buildQuickSearch entries =
+  let entries' = map (uncurry Entry) entries
+      tokenFilter = buildTokenPartitions entries'
+  in  QuickSearch entries' tokenFilter
 
 -- | Given a QuickSearch object, scorer, and string, return the top N matches.
 topNMatches
@@ -53,7 +64,7 @@ matchesWithThreshold
   -> [Scored (Entry uid)] -- ^ Top N most similar entries
 matchesWithThreshold qs cutoff scorer entry =
   let results = scoreMatches entry qs scorer
-  in  takeWhile ((>= cutoff) . fst) results
+  in  takeWhile ((>= cutoff) . scoredScore) results
 
 -- | Turn a match retrieval function into one that works on lists of entries.
 batch
@@ -68,7 +79,7 @@ batch
   -> [(Entry uid1, [Scored (Entry uid2)])]
   -- ^ List of entries and the results returned for each.
 batch f qs n scorer entries =
-  let results = map (f qs n scorer . fst) entries in zip entries results
+  let results = map (f qs n scorer . entryName) entries in zip entries results
 
 -- | Version of topNMatches that processes lists of entries instead of strings.
 batchTopNMatches

@@ -5,12 +5,12 @@ module QuickSearch.MatchAndScore
   , Token
   , Score
   , Scorer
-  , Scored
+  , Scored(..)
   , QuickSearch(QuickSearch)
   )
 where
 
-import           Control.Arrow
+import           Control.Arrow  hiding (first, second)
 import           Data.Hashable
 import qualified Data.HashMap.Lazy  as HMap
 import qualified Data.HashSet       as HSet
@@ -23,14 +23,17 @@ import           QuickSearch.Filter
 
 type Score = Int
 type Scorer = (T.Text -> T.Text -> Ratio Int)
-type Scored a = (Score, a)
+
+data Scored a = Scored {
+    scoredScore :: Score
+  , scoredEntry :: a
+} deriving (Show)
+--type Scored a = (Score, a)
 
 data QuickSearch uid = QuickSearch
-  { getNames       :: [T.Text]
-  -- ^ List of names making up the full search space
-  , getuids        :: [uid]
-  -- ^ List of UIDs associated with the list of names
-  , getTokenFilter :: HMap.HashMap Token (HSet.HashSet uid)
+  { quickSearchEntries :: [Entry uid]
+  -- ^ List of names and UIDs
+  , quickSearchTokenFilter :: HMap.HashMap Token (HSet.HashSet uid)
   -- ^ HashMap associating lists of UIDs with individual word-level tokens
   }
 
@@ -45,8 +48,9 @@ scoreMatches
   -> [Scored (Entry uid)] -- ^ A list of possible matches and their scores
 scoreMatches (T.toCaseFold -> entry) qs scorer =
   let searchSpace = map (first T.toCaseFold) $ pruneSearchSpace entry qs
-      results     = map (toPercent . scorer entry . fst &&& id) searchSpace
-  in  sortBy (comparing (Down . fst)) results
+      scoreEntry = toPercent . scorer entry . entryName
+      results     = map (uncurry Scored . (scoreEntry &&& id)) searchSpace
+  in  sortBy (comparing (Down . scoredScore)) results
 
 -- | Given a string and a QuickSearch object, return the list of entries
 -- from within the QuickSearch that share a full token with the target string
@@ -54,10 +58,9 @@ pruneSearchSpace
   :: (Hashable uid, Eq uid) => T.Text -- ^ Name or other string to be searched
   -> QuickSearch uid -- ^ The QuickSearch object to be used
   -> [Entry uid] -- ^ A list of strings to search through and their UIDs
-pruneSearchSpace entry (QuickSearch names uids tokenFilter) =
-  let entries      = zip names uids
-      uidPartition = getSearchPartition entry tokenFilter
-  in  filter ((`HSet.member` uidPartition) . snd) entries
+pruneSearchSpace entry (QuickSearch entries tokenFilter) =
+  let uidPartition = getSearchPartition entry tokenFilter
+  in  filter ((`HSet.member` uidPartition) . entryUID) entries
 
 toPercent :: Ratio Int -> Int
 toPercent r = floor $ (num / denom) * 100
