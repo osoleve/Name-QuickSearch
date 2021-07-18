@@ -28,9 +28,6 @@ data Entry uid = Entry {
 first :: (T.Text -> T.Text) -> Entry uid -> Entry uid
 first f entry = Entry (f . entryName $ entry) (entryUID entry)
 
-second :: (uid -> uid) -> Entry uid -> Entry uid
-second f entry = Entry (entryName entry) (f . entryUID $ entry)
-
 toTokenizedTuple :: (Hashable uid, Eq uid) => Entry uid -> ([Token], uid)
 toTokenizedTuple = getTokens . entryName &&& entryUID
 

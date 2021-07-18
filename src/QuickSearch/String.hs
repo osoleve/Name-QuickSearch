@@ -35,9 +35,6 @@ data SEntry uid = SEntry {
 first :: (String -> String) -> SEntry uid -> SEntry uid
 first f entry = SEntry (f . sEntryName $ entry) (sEntryUID entry)
 
-second :: (uid -> uid) -> SEntry uid -> SEntry uid
-second f entry = SEntry (sEntryName entry) (f . sEntryUID $ entry)
-
 stringEntryToEntry :: (Hashable uid, Eq uid) => SEntry uid -> Entry uid
 stringEntryToEntry = uncurry Entry . (T.pack . sEntryName &&& sEntryUID)
 
@@ -65,13 +62,24 @@ scoredTextToString scoredSEntry = Scored score textEntry
     textEntry = entryToStringEntry entry
 
 -- | Given a list of entries to be searched, create a QuickSearch object.
-buildQuickSearch
+rawBuildQuickSearch
   :: (Hashable uid, Eq uid)
   => [SEntry uid] -- ^ List of entries to be searched
   -> QuickSearch uid -- ^ QuickSearch object holding token partitions
-buildQuickSearch entries =
+rawBuildQuickSearch entries =
   let stringToText = T.pack . sEntryName
       entries' = map stringEntryToEntry entries
+      tokenFilter = buildTokenPartitions entries'
+  in  QuickSearch entries' tokenFilter
+
+-- | Given a list of pairs of (String, uid) to be searched,
+-- create a QuickSearch object.
+buildQuickSearch
+  :: (Hashable uid, Eq uid)
+  => [(String, uid)] -- ^ List of entries to be searched
+  -> QuickSearch uid -- ^ QuickSearch object holding token partitions
+buildQuickSearch entries =
+  let entries' = map (stringEntryToEntry . uncurry SEntry) entries
       tokenFilter = buildTokenPartitions entries'
   in  QuickSearch entries' tokenFilter
 
