@@ -87,4 +87,4 @@ _Shout out to Charles Sommers, who wrote the Python tool
 I'm reimplementing the idea of._
 
 `unstableNub` used in `QuickSearch.Filter` borrowed from `Universum.Nub`
-under the MIT license.
+and modified slightly under the MIT license.
