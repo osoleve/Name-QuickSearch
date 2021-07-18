@@ -85,3 +85,6 @@ and decorating it.
 
 _Shout out to Charles Sommers, who wrote the Python tool
 I'm reimplementing the idea of._
+
+`unstableNub` used in `QuickSearch.Filter` borrowed from `Universum.Nub`
+and modified slightly under the MIT license.

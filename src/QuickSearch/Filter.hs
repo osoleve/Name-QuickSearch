@@ -49,12 +49,16 @@ tokenPartitions
   :: forall uid . (Hashable uid, Eq uid)
   => [([Token], uid)] -- ^ List of tokenized entries
   -> HMap.HashMap Token (HSet.HashSet uid) -- ^ A map of Token -> [uids]
-tokenPartitions entries = HMap.fromList $ map (id &&& allWith) allTokens
+tokenPartitions tokenizedEntries =
+  HMap.fromList $ [(tok, allWith tok) | tok <- allTokens]
  where
-  allTokens = nub . concatMap fst $ entries
-  allWith :: (Hashable uid) => Token -> HSet.HashSet uid
+  -- | Quick dedupe of a list. Does not preserve order.
+  unstableNub :: [Token] -> [Token]
+  unstableNub = HSet.toList . HSet.fromList
+  allTokens = unstableNub . concatMap fst $ tokenizedEntries
+  allWith :: (Hashable uid, Eq uid) => Token -> HSet.HashSet uid
   allWith token =
-    HSet.fromList . map snd $ filter ((token `elem`) . fst) entries
+    HSet.fromList . map snd $ filter ((token `elem`) . fst) tokenizedEntries
 
 -- | Given a target string and a Token HashMap, return the union of
 -- sets of uids associated with the tokens in the target string
