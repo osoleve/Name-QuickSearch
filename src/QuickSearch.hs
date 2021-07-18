@@ -24,13 +24,24 @@ import           QuickSearch.Filter
 import           QuickSearch.MatchAndScore
 
 -- | Given a list of entries to be searched, create a QuickSearch object.
-buildQuickSearch
+rawBuildQuickSearch
   :: (Hashable uid, Eq uid)
   => [Entry uid] -- ^ List of entries to be searched
   -> QuickSearch uid -- ^ QuickSearch object holding token partitions
-buildQuickSearch entries =
+rawBuildQuickSearch entries =
   let tokenFilter = buildTokenPartitions entries
   in  QuickSearch entries tokenFilter
+
+-- | Given a list of pairs of (T.Text, uid) to be searched,
+-- create a QuickSearch object.
+buildQuickSearch
+  :: (Hashable uid, Eq uid)
+  => [(T.Text, uid)] -- ^ List of entries to be searched
+  -> QuickSearch uid -- ^ QuickSearch object holding token partitions
+buildQuickSearch entries =
+  let entries' = map (uncurry Entry) entries
+      tokenFilter = buildTokenPartitions entries'
+  in  QuickSearch entries' tokenFilter
 
 -- | Given a QuickSearch object, scorer, and string, return the top N matches.
 topNMatches
