@@ -75,11 +75,13 @@ batch
   -> Int -- ^ The reference number for the match retrieval function.
          -- N for topNMatches, threshold for matchesWithThreshold
   -> Scorer -- ^ String similarity function of type (Text -> Text -> Ratio Int)
-  -> [Entry uid1] -- ^ List of entries to be processed
+  -> [(T.Text, uid1)] -- ^ List of entries to be processed
   -> [(Entry uid1, [Scored (Entry uid2)])]
   -- ^ List of entries and the results returned for each.
 batch f qs n scorer entries =
-  let results = map (f qs n scorer . entryName) entries in zip entries results
+  let entries' = map (uncurry Entry) entries
+      results = map (f qs n scorer . entryName) entries'
+  in zip entries' results
 
 -- | Version of topNMatches that processes lists of entries instead of strings.
 batchTopNMatches
@@ -87,7 +89,7 @@ batchTopNMatches
   => QuickSearch uid2 -- ^ QuickSearch object holding token partitions
   -> Int -- ^ N: Number of results to return
   -> Scorer -- ^ String similarity function of type (Text -> Text -> Ratio Int)
-  -> [Entry uid1] -- ^ List of entries to be processed
+  -> [(T.Text, uid1)] -- ^ List of entries to be processed
   -> [(Entry uid1, [Scored (Entry uid2)])]
   -- ^ List of entries and up to the top N matches for each.
 batchTopNMatches = batch topNMatches
@@ -98,7 +100,7 @@ batchMatchesWithThreshold
   => QuickSearch uid2 -- ^ QuickSearch object holding token partitions
   -> Int -- ^ N: Number of results to return
   -> Scorer -- ^ String similarity function of type (Text -> Text -> Ratio Int)
-  -> [Entry uid1] -- ^ List of entries to be processed
+  -> [(T.Text, uid1)] -- ^ List of entries to be processed
   -> [(Entry uid1, [Scored (Entry uid2)])]
   -- ^ List of entries and their matches above the score threshold.
 batchMatchesWithThreshold = batch matchesWithThreshold
