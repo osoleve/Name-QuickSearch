@@ -1,8 +1,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
-module QuickSearch.Matcher
+module QuickSearch.Internal.Matcher
   ( scoreMatches
-  , Token
   , Score
   , Scorer
   , Match(..)
@@ -10,17 +9,17 @@ module QuickSearch.Matcher
   )
 where
 
-import           Control.Arrow      (Arrow ((&&&)))
-import qualified Data.HashMap.Lazy  as HMap
-import qualified Data.HashSet       as HSet
-import           Data.Hashable      (Hashable)
-import           Data.List          (sortBy)
-import           Data.Ord           (Down (Down), comparing)
-import           Data.Ratio         (Ratio, denominator, numerator)
-import qualified Data.Text          as T
+import           Control.Arrow               (Arrow ((&&&)))
+import qualified Data.HashMap.Lazy           as HMap
+import qualified Data.HashSet                as HSet
+import           Data.Hashable               (Hashable)
+import           Data.List                   (sortBy)
+import           Data.Ord                    (Down (Down), comparing)
+import           Data.Ratio                  (Ratio, denominator, numerator)
+import qualified Data.Text                   as T
 
-import           QuickSearch.Filter (Entry (..), Token, first,
-                                     getSearchPartition)
+import           QuickSearch.Internal.Filter (Entry (..), Token, first,
+                                              getSearchPartition)
 
 type Score = Int
 type Scorer = (T.Text -> T.Text -> Ratio Int)

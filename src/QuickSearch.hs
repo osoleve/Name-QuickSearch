@@ -14,14 +14,17 @@ module QuickSearch
   )
 where
 
-import           Data.List          hiding (find)
-import           Data.Hashable
-import           Data.Ratio
-import qualified Data.Text          as T
-import           Data.Text.Metrics  (damerauLevenshteinNorm, jaro, jaroWinkler)
+import           Data.Hashable                (Hashable)
+import           Data.List                    ()
+import           Data.Ratio                   ()
+import qualified Data.Text                    as T
+import           Data.Text.Metrics            (damerauLevenshteinNorm, jaro,
+                                               jaroWinkler)
 
-import           QuickSearch.Filter
-import           QuickSearch.Matcher
+import           QuickSearch.Internal.Filter  (Entry (..), Token,
+                                               buildTokenPartitions)
+import           QuickSearch.Internal.Matcher (Match (..), QuickSearch (..),
+                                               Score, Scorer, scoreMatches)
 
 -- | Given a list of entries to be searched, create a QuickSearch object.
 rawBuildQuickSearch

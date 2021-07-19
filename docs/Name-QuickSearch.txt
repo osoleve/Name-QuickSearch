@@ -7,7 +7,7 @@
 @package Name-QuickSearch
 @version 0.1.0.0
 
-module QuickSearch.Filter
+module QuickSearch.Internal.Filter
 
 -- | Given the list of entries to be held by QuickSearch, return a HashMap
 --   keyed on tokens from the strings in the entries, where the associated
@@ -23,9 +23,9 @@ Entry :: Text -> uid -> Entry uid
 [entryName] :: Entry uid -> Text
 [entryUID] :: Entry uid -> uid
 first :: (Text -> Text) -> Entry uid -> Entry uid
-instance GHC.Show.Show uid => GHC.Show.Show (QuickSearch.Filter.Entry uid)
+instance GHC.Show.Show uid => GHC.Show.Show (QuickSearch.Internal.Filter.Entry uid)
 
-module QuickSearch.Matcher
+module QuickSearch.Internal.Matcher
 
 -- | Ignore the linter here, this is a performance thing
 --   
@@ -33,7 +33,6 @@ module QuickSearch.Matcher
 --   function, returns potential matches contained in the QuickSearch
 --   filters and their associated scores, in descending order by score.
 scoreMatches :: (Hashable uid, Eq uid) => Text -> QuickSearch uid -> Scorer -> [Match (Entry uid)]
-type Token = Text
 type Score = Int
 type Scorer = (Text -> Text -> Ratio Int)
 data Match a
@@ -42,7 +41,7 @@ Match :: Score -> a -> Match a
 [matchEntry] :: Match a -> a
 data QuickSearch uid
 QuickSearch :: [Entry uid] -> HashMap Token (HashSet uid) -> QuickSearch uid
-instance GHC.Show.Show a => GHC.Show.Show (QuickSearch.Matcher.Match a)
+instance GHC.Show.Show a => GHC.Show.Show (QuickSearch.Internal.Matcher.Match a)
 
 module QuickSearch
 

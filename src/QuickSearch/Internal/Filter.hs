@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module QuickSearch.Filter
+module QuickSearch.Internal.Filter
   ( buildTokenPartitions
   , getSearchPartition
   , Token

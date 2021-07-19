@@ -16,14 +16,16 @@ module QuickSearch.String
   )
 where
 
-import           Control.Arrow       (Arrow ((&&&)))
-import           Data.Hashable       (Hashable)
-import qualified Data.Text           as T
-import           Data.Text.Metrics   (damerauLevenshteinNorm, jaro, jaroWinkler)
+import           Control.Arrow                (Arrow ((&&&)))
+import           Data.Hashable                (Hashable)
+import qualified Data.Text                    as T
+import           Data.Text.Metrics            (damerauLevenshteinNorm, jaro,
+                                               jaroWinkler)
 
-import           QuickSearch.Filter  (Entry (..), Token, buildTokenPartitions)
-import           QuickSearch.Matcher (Match (..), QuickSearch (..), Score,
-                                      Scorer, scoreMatches)
+import           QuickSearch.Internal.Filter  (Entry (..), Token,
+                                               buildTokenPartitions)
+import           QuickSearch.Internal.Matcher (Match (..), QuickSearch (..),
+                                               Score, Scorer, scoreMatches)
 
 data SEntry uid = SEntry {
     sEntryName :: String
