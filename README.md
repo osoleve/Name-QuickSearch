@@ -28,23 +28,24 @@ to be found at `QuickSearch.String` if that suits the pipeline better.
 Usage:
 
 ```haskell
-> import QuickSearch.String
+> import QuickSearch
 
-> names = ["Rep. Meg Mueller","Twana Jacobs","Sammie Paucek"]
+> names = map T.pack ["Rep. Meg Mueller","Twana Jacobs","Sammie Paucek"]
 
 > targets = zip names [1..] --Stand-in for your UIDs
 > qs = buildQuickSearch targets
 
--- Scorer can be any func of type (T.Text -> T.Text -> Ratio Int)
-> entry = "Rep. Meg Muller"
+-- Exposes jaro, jaroWinkler, and damerauLevenshteinNorm from Data.Text.Metrics
+-- but scorer can be any func of type (T.Text -> T.Text -> Ratio Int)
+> entry = T.pack "Rep. Meg Muller"
 > topNMatches qs 1 jaroWinkler entry
 [Match {matchScore = 100,
-        matchEntry = SEntry {sEntryName = "rep. meg mueller", sEntryUID = 1}}]
+        matchEntry = Entry {entryName = "rep. meg mueller", entryUID = 1}}]
 
-> entry = "Towana Jacobs"
+> entry = T.pack "Towana Jacobs"
 > matchesWithThreshold qs 90 damerauLevenshteinNorm entry
 [Match {matchScore = 92,
-        matchEntry = SEntry {sEntryName = "twana jacobs", sEntryUID = 2}}]
+        matchEntry = Entry {entryName = "twana jacobs", entryUID = 2}}]
 ```
 
 ### Batch Usage
