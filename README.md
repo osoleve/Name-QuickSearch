@@ -38,8 +38,8 @@ Usage:
 -- Scorer can be any func of type (T.Text -> T.Text -> Ratio Int)
 > entry = "Rep. Meg Muller"
 > topNMatches qs 1 jaroWinkler entry
-[Scored {matchScore = 100,
-         matchEntry = SEntry {sEntryName = "rep. meg mueller", sEntryUID = 1}}]
+[Match {matchScore = 100,
+        matchEntry = SEntry {sEntryName = "rep. meg mueller", sEntryUID = 1}}]
 
 > entry = "Towana Jacobs"
 > matchesWithThreshold qs 90 damerauLevenshteinNorm entry
