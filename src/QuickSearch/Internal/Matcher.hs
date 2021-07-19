@@ -5,11 +5,14 @@ module QuickSearch.Internal.Matcher
   , Score
   , Scorer
   , Match(..)
+  , matchScore
+  , matchEntry
   , QuickSearch(QuickSearch)
   )
 where
 
 import           Control.Arrow               (Arrow ((&&&)))
+import           Data.Bifunctor              (Bifunctor (first))
 import qualified Data.HashMap.Lazy           as HMap
 import qualified Data.HashSet                as HSet
 import           Data.Hashable               (Hashable)
@@ -18,23 +21,44 @@ import           Data.Ord                    (Down (Down), comparing)
 import           Data.Ratio                  (Ratio, denominator, numerator)
 import qualified Data.Text                   as T
 
-import           QuickSearch.Internal.Filter (Entry (..), Token, first,
-                                              getSearchPartition)
+import           QuickSearch.Internal.Filter (Entry (..), Token, entryName,
+                                              entryUID, getSearchPartition)
 
 type Score = Int
 type Scorer = (T.Text -> T.Text -> Ratio Int)
 
-data Match a = Match {
-    matchScore :: Score
-  , matchEntry :: a
-} deriving (Show)
+-- | Structure associating a Score with an Entry, for holding search results
+newtype Match score entry = Match (score, entry)
+  deriving (Show)
 
-data QuickSearch uid = QuickSearch
-  { quickSearchEntries     :: [Entry uid]
-  -- ^ List of names and UIDs
-  , quickSearchTokenFilter :: HMap.HashMap Token (HSet.HashSet uid)
-  -- ^ HashMap associating lists of UIDs with individual word-level tokens
-  }
+-- | Score accessor for Match
+matchScore :: Match Score (Entry name uid)  -> Score
+matchScore (Match (score, _)) = score
+
+-- | Entry accessor for Match
+matchEntry :: Match Score (Entry name uid) -> Entry name uid
+matchEntry (Match (_, entry@(Entry (_, _)))) = entry
+
+{- | List of entries to be searched and a HashMap associating tokens with
+   HashSets of UIDs related to entries containing the tokens.
+-}
+newtype QuickSearch uid =
+  QuickSearch ([Entry T.Text uid],
+                HMap.HashMap Token (HSet.HashSet uid))
+  deriving (Show)
+
+-- | [Entry name uid] accessor for QuickSearch
+quickSearchEntries
+  :: (Hashable uid, Eq uid) => QuickSearch uid -> [Entry T.Text uid]
+quickSearchEntries (QuickSearch (entries, _)) = entries
+
+
+-- | tokenFilter accessor for QuickSearch
+quickSearchTokenFilter
+  :: (Hashable uid, Eq uid)
+  => QuickSearch uid
+  -> HMap.HashMap Token (HSet.HashSet uid)
+quickSearchTokenFilter (QuickSearch (_, tokenFilter))= tokenFilter
 
 {- | Given a string to search, a QuickSearch object, and a similarity function,
    returns potential matches contained in the QuickSearch filters and their
@@ -45,11 +69,12 @@ scoreMatches
   => T.Text  -- ^ Name or other string to be searched
   -> QuickSearch uid  -- ^ The QuickSearch object to be used
   -> Scorer  -- ^ A string distance function of type (Text -> Text -> Ratio Int)
-  -> [Match (Entry uid)]  -- ^ A list of possible matches and their scores
+  -> [Match Score (Entry T.Text uid)]  -- ^ A list of possible matches 
 scoreMatches (T.toCaseFold -> entry) qs scorer =
-  let searchSpace = map (first T.toCaseFold) $ pruneSearchSpace entry qs
+  let searchSpace = pruneSearchSpace entry qs
+      searchSpace' = map (first T.toCaseFold) searchSpace
       scoreEntry = toPercent . scorer entry . entryName
-      results     = map (uncurry Match . (scoreEntry &&& id)) searchSpace
+      results     = map (Match . (scoreEntry &&& id)) searchSpace
   in  sortBy (comparing (Down . matchScore)) results
 -- ^ Ignore the linter here, this is a performance thing
 
@@ -57,10 +82,11 @@ scoreMatches (T.toCaseFold -> entry) qs scorer =
    from within the QuickSearch that share a full token with the target string
 -}
 pruneSearchSpace
-  :: (Hashable uid, Eq uid) => T.Text  -- ^ Name or other string to be searched
+  :: (Hashable uid, Eq uid)
+  => T.Text  -- ^ Name or other string to be searched
   -> QuickSearch uid  -- ^ The QuickSearch object to be used
-  -> [Entry uid]  -- ^ A list of strings to search through and their UIDs
-pruneSearchSpace entry (QuickSearch entries tokenFilter) =
+  -> [Entry T.Text uid]  -- ^ A list of strings to search through and their UIDs
+pruneSearchSpace entry (QuickSearch (entries, tokenFilter)) =
   let uidPartition = getSearchPartition entry tokenFilter
   in  filter ((`HSet.member` uidPartition) . entryUID) entries
 
