@@ -1,7 +1,7 @@
 name:                Name-QuickSearch
 version:             0.1.0.0
 github:              "osoleve/Name-QuickSearch"
-license:             BSD3
+license:             MIT
 author:              "oso"
 maintainer:          "example@example.com"
 copyright:           "2021 oso"
