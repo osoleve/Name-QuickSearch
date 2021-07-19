@@ -39,13 +39,11 @@ Usage:
 -- but scorer can be any func of type (T.Text -> T.Text -> Ratio Int)
 > entry = T.pack "Rep. Meg Muller"
 > topNMatches qs 1 jaroWinkler entry
-[Match {matchScore = 100,
-        matchEntry = Entry {entryName = "rep. meg mueller", entryUID = 1}}]
+[Match (100,Entry ("rep. meg mueller", 1))]
 
 > entry = T.pack "Towana Jacobs"
 > matchesWithThreshold qs 90 damerauLevenshteinNorm entry
-[Match {matchScore = 92,
-        matchEntry = Entry {entryName = "twana jacobs", entryUID = 2}}]
+[Match (92,Entry ("twana jacobs", 2))]
 ```
 
 ### Batch Usage
