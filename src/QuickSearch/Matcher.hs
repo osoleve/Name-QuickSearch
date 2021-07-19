@@ -1,11 +1,11 @@
 {-# LANGUAGE ViewPatterns #-}
 
-module QuickSearch.MatchAndScore
+module QuickSearch.Matcher
   ( scoreMatches
   , Token
   , Score
   , Scorer
-  , Scored(..)
+  , Match(..)
   , QuickSearch(QuickSearch)
   )
 where
@@ -25,11 +25,10 @@ import           QuickSearch.Filter (Entry (..), Token, first,
 type Score = Int
 type Scorer = (T.Text -> T.Text -> Ratio Int)
 
-data Scored a = Scored {
-    scoredScore :: Score
-  , scoredEntry :: a
+data Match a = Match {
+    matchScore :: Score
+  , matchEntry :: a
 } deriving (Show)
---type Scored a = (Score, a)
 
 data QuickSearch uid = QuickSearch
   { quickSearchEntries     :: [Entry uid]
@@ -47,12 +46,12 @@ scoreMatches
   => T.Text  -- ^ Name or other string to be searched
   -> QuickSearch uid  -- ^ The QuickSearch object to be used
   -> Scorer  -- ^ A string distance function of type (Text -> Text -> Ratio Int)
-  -> [Scored (Entry uid)]  -- ^ A list of possible matches and their scores
+  -> [Match (Entry uid)]  -- ^ A list of possible matches and their scores
 scoreMatches (T.toCaseFold -> entry) qs scorer =
   let searchSpace = map (first T.toCaseFold) $ pruneSearchSpace entry qs
       scoreEntry = toPercent . scorer entry . entryName
-      results     = map (uncurry Scored . (scoreEntry &&& id)) searchSpace
-  in  sortBy (comparing (Down . scoredScore)) results
+      results     = map (uncurry Match . (scoreEntry &&& id)) searchSpace
+  in  sortBy (comparing (Down . matchScore)) results
 -- ^ Ignore the linter here, this is a performance thing
 
 {- | Given a string and a QuickSearch object, return the list of entries

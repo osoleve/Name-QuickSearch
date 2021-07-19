@@ -38,11 +38,13 @@ Usage:
 -- Scorer can be any func of type (T.Text -> T.Text -> Ratio Int)
 > entry = "Rep. Meg Muller"
 > topNMatches qs 1 jaroWinkler entry
-[(100,("Rep. Meg Mueller",1))]
+[Scored {matchScore = 100,
+         matchEntry = SEntry {sEntryName = "rep. meg mueller", sEntryUID = 1}}]
 
 > entry = "Towana Jacobs"
 > matchesWithThreshold qs 90 damerauLevenshteinNorm entry
-[(92,("Twana Jacobs",2))]
+[Match {matchScore = 92,
+        matchEntry = SEntry {sEntryName = "twana jacobs", sEntryUID = 2}}]
 ```
 
 ### Batch Usage
@@ -73,7 +75,7 @@ scorer :: (T.Text -> T.Text -> Ratio Int)
 
 > oneShotTopNMatches 5 names targets scorer
 ```
-which will return a list of `(Entry uid1, Scored (Entry uid2))`
+which will return a list of `(Entry uid1, Match (Entry uid2))`
 
 `topNMatches` and `matchesWithThreshold` have one-shot batch versions, named
 `oneShotTopNMatches` and `oneShotMatchesWithThreshold` respectively. Like the

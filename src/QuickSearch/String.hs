@@ -11,21 +11,19 @@ module QuickSearch.String
   , Score
   , Scorer
   , SEntry(..)
-  , Scored
+  , Match
   , QuickSearch(..)
   )
 where
 
-import           Control.Arrow             (Arrow ((&&&)))
-import           Data.Hashable             (Hashable)
-import qualified Data.Text                 as T
-import           Data.Text.Metrics         (damerauLevenshteinNorm, jaro,
-                                            jaroWinkler)
+import           Control.Arrow       (Arrow ((&&&)))
+import           Data.Hashable       (Hashable)
+import qualified Data.Text           as T
+import           Data.Text.Metrics   (damerauLevenshteinNorm, jaro, jaroWinkler)
 
-import           QuickSearch.Filter        (Entry (..), Token,
-                                            buildTokenPartitions)
-import           QuickSearch.MatchAndScore (QuickSearch (..), Score,
-                                            Scored (..), Scorer, scoreMatches)
+import           QuickSearch.Filter  (Entry (..), Token, buildTokenPartitions)
+import           QuickSearch.Matcher (Match (..), QuickSearch (..), Score,
+                                      Scorer, scoreMatches)
 
 data SEntry uid = SEntry {
     sEntryName :: String
@@ -38,24 +36,24 @@ stringEntryToEntry = uncurry Entry . (T.pack . sEntryName &&& sEntryUID)
 entryToStringEntry :: (Hashable uid, Eq uid) => Entry uid -> SEntry uid
 entryToStringEntry = uncurry SEntry . (T.unpack . entryName &&& entryUID)
 
--- | Given a Scored (SEntry uid), return it as a Scored (Entry uid)
+-- | Given a Match (SEntry uid), return it as a Match (Entry uid)
 scoredStringToText
   :: (Hashable uid, Eq uid)
-  => Scored (SEntry uid)
-  -> Scored (Entry uid)
-scoredStringToText scoredSEntry = Scored score textEntry
+  => Match (SEntry uid)
+  -> Match (Entry uid)
+scoredStringToText scoredSEntry = Match score textEntry
   where
-    (score, entry) = (scoredScore &&& scoredEntry) scoredSEntry
+    (score, entry) = (matchScore &&& matchEntry) scoredSEntry
     textEntry = stringEntryToEntry entry
 
--- | Given a Scored (SEntry uid), return it as a Scored (Entry uid)
+-- | Given a Match (SEntry uid), return it as a Match (Entry uid)
 scoredTextToString
   :: (Hashable uid, Eq uid)
-  => Scored (Entry uid)
-  -> Scored (SEntry uid)
-scoredTextToString scoredSEntry = Scored score textEntry
+  => Match (Entry uid)
+  -> Match (SEntry uid)
+scoredTextToString scoredSEntry = Match score textEntry
   where
-    (score, entry) = (scoredScore &&& scoredEntry) scoredSEntry
+    (score, entry) = (matchScore &&& matchEntry) scoredSEntry
     textEntry = entryToStringEntry entry
 
 -- | Given a list of entries to be searched, create a QuickSearch object.
@@ -85,7 +83,7 @@ topNMatches
   -> Int  -- ^ N: Number of results to return
   -> Scorer  -- ^ String similarity function of type (Text -> Text -> Ratio Int)
   -> String  -- ^ String to be searched
-  -> [Scored (SEntry uid)]  -- ^ Top N most similar entries
+  -> [Match (SEntry uid)]  -- ^ Top N most similar entries
 topNMatches qs n scorer (T.pack -> entry) = map scoredTextToString results
   where results = take n (scoreMatches entry qs scorer)
 
@@ -98,7 +96,7 @@ matchesWithThreshold
   -> Int  -- ^ Threshold score above which to return results
   -> Scorer  -- ^ String similarity function of type (Text -> Text -> Ratio Int)
   -> String  -- ^ String to be searched
-  -> [Scored (SEntry uid)]  -- ^ Top N most similar entries
+  -> [Match (SEntry uid)]  -- ^ Top N most similar entries
 matchesWithThreshold qs cutoff scorer (T.pack -> entry) =
   let results = scoreMatches entry qs scorer
   in map scoredTextToString results
@@ -106,7 +104,7 @@ matchesWithThreshold qs cutoff scorer (T.pack -> entry) =
 -- | Turn a match retrieval function into one that works on lists of entries.
 batch
   :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2)
-  => (QuickSearch uid2 -> Int -> Scorer -> String -> [Scored (SEntry uid2)])
+  => (QuickSearch uid2 -> Int -> Scorer -> String -> [Match (SEntry uid2)])
   -- ^ A match retrieval function, such as topNMatches
   -> QuickSearch uid2  -- ^ QuickSearch object holding token partitions
   -> Int  {- ^ The reference number for the match retrieval function.
@@ -114,7 +112,7 @@ batch
           -}
   -> Scorer  -- ^ String similarity function of type (Text -> Text -> Ratio Int)
   -> [(String, uid1)]  -- ^ List of entries to be processed
-  -> [(SEntry uid1, [Scored (SEntry uid2)])]
+  -> [(SEntry uid1, [Match (SEntry uid2)])]
   -- ^ List of entries and the results returned for each.
 batch f qs n scorer entries =
   let entries' = map (uncurry SEntry) entries
@@ -128,7 +126,7 @@ batchTopNMatches
   -> Int  -- ^ N: Number of results to return
   -> Scorer  -- ^ String similarity function of type (Text -> Text -> Ratio Int)
   -> [(String, uid1)]  -- ^ List of entries to be processed
-  -> [(SEntry uid1, [Scored (SEntry uid2)])]
+  -> [(SEntry uid1, [Match (SEntry uid2)])]
   -- ^ List of entries and up to the top N matches for each.
 batchTopNMatches = batch topNMatches
 
@@ -141,6 +139,6 @@ batchMatchesWithThreshold
   -> Int  -- ^ N: Number of results to return
   -> Scorer  -- ^ String similarity function of type (Text -> Text -> Ratio Int)
   -> [(String, uid1)]  -- ^ List of entries to be processed
-  -> [(SEntry uid1, [Scored (SEntry uid2)])]
+  -> [(SEntry uid1, [Match (SEntry uid2)])]
   -- ^ List of entries and their matches above the score threshold.
 batchMatchesWithThreshold = batch matchesWithThreshold
