@@ -12,7 +12,7 @@ import           Data.Hashable     (Hashable)
 import qualified Data.Text         as T
 import           Data.Text.Metrics (damerauLevenshteinNorm, jaro, jaroWinkler)
 
-import           QuickSearch       (Entry (..), QuickSearch, Scored, Scorer,
+import           QuickSearch       (Entry (..), QuickSearch, Match, Scorer,
                                     buildQuickSearch, matchesWithThreshold,
                                     topNMatches)
 
@@ -22,13 +22,13 @@ import           QuickSearch       (Entry (..), QuickSearch, Scored, Scorer,
 -}
 oneShot
   :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2)
-  => (QuickSearch uid2 -> Int -> Scorer -> T.Text -> [Scored (Entry uid2)])
+  => (QuickSearch uid2 -> Int -> Scorer -> T.Text -> [Match (Entry uid2)])
   -- ^ Match retrieval function to be converted into a one-shot
   -> Int  -- ^ The reference number for the match retrieval function.
   -> [(T.Text, uid1)]  -- ^ List of entries to be processed
   -> [(T.Text, uid2)]  -- ^ List of entries making up the search space
   -> Scorer  -- ^ Similarity function with type (Text -> Text -> Ratio Int)
-  -> [(Entry uid1, [Scored (Entry uid2)])]
+  -> [(Entry uid1, [Match (Entry uid2)])]
     -- ^ List of entries and their matches.
 oneShot f n entries targets scorer =
   let qs      = buildQuickSearch targets
@@ -44,7 +44,7 @@ oneShotTopNMatches
   -> [(T.Text, uid1)]  -- ^ List of entries to be processed
   -> [(T.Text, uid2)]  -- ^ List of entries making up the search space
   -> Scorer  -- ^ Similarity function with type (Text -> Text -> Ratio Int)
-  -> [(Entry uid1, [Scored (Entry uid2)])]
+  -> [(Entry uid1, [Match (Entry uid2)])]
   -- ^ List of entries and up to N of the best matches.
 oneShotTopNMatches = oneShot topNMatches
 
@@ -57,6 +57,6 @@ oneShotMatchesWithThreshold
   -> [(T.Text, uid1)]  -- ^ List of entries to be processed
   -> [(T.Text, uid2)]  -- ^ List of entries making up the search space
   -> Scorer  -- ^ Similarity function with type (Text -> Text -> Ratio Int)
-  -> [(Entry uid1, [Scored (Entry uid2)])]
+  -> [(Entry uid1, [Match (Entry uid2)])]
   -- ^ List of entries and their matches above the score threshold.
 oneShotMatchesWithThreshold = oneShot matchesWithThreshold
