@@ -12,7 +12,7 @@ bug-reports:    https://github.com/osoleve/Name-QuickSearch/issues
 author:         oso
 maintainer:     example@example.com
 copyright:      2021 oso
-license:        BSD3
+license:        MIT
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
