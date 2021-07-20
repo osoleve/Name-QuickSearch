@@ -89,6 +89,14 @@ matchScore :: Match Score (Entry name uid) -> Score
 -- | Entry accessor for Match
 matchEntry :: Match Score (Entry name uid) -> Entry name uid
 
+-- | <ul>
+--   <li><i>Entry name uid</i> accessor for QuickSearch</li>
+--   </ul>
+quickSearchEntries :: (Hashable uid, Eq uid) => QuickSearch uid -> [Entry Text uid]
+
+-- | tokenFilter accessor for QuickSearch
+quickSearchTokenFilter :: (Hashable uid, Eq uid) => QuickSearch uid -> HashMap Token (HashSet uid)
+
 -- | List of entries to be searched and a HashMap associating tokens with
 --   HashSets of UIDs related to entries containing the tokens.
 newtype QuickSearch uid
@@ -101,6 +109,9 @@ module QuickSearch
 -- | Given a list of pairs of (T.Text, uid) to be searched, create a
 --   QuickSearch object.
 buildQuickSearch :: (Hashable uid, Eq uid) => [(Text, uid)] -> QuickSearch uid
+
+-- | Given a list of entries to be searched, create a QuickSearch object.
+rawBuildQuickSearch :: (Hashable uid, Eq uid) => [Entry Text uid] -> QuickSearch uid
 
 -- | Given a QuickSearch object, scorer, and string, return all matches
 --   with a score greater than the given threshold.
@@ -211,6 +222,9 @@ module QuickSearch.String
 -- | Given a list of pairs of (String, uid) to be searched, create a
 --   QuickSearch object.
 buildQuickSearch :: (Hashable uid, Eq uid) => [(String, uid)] -> QuickSearch uid
+
+-- | Given a list of entries to be searched, create a QuickSearch object.
+rawBuildQuickSearch :: (Hashable uid, Eq uid) => [Entry String uid] -> QuickSearch uid
 
 -- | Given a QuickSearch object, scorer, and string, return the top N
 --   matches.
