@@ -14,11 +14,17 @@ module QuickSearch
     , entryUID
     , Match(..)
     , QuickSearch(..)
+    , damerauLevenshteinNorm
+    , jaro
+    , jaroWinkler
     ) where
 
 import           Data.Hashable                  ( Hashable )
 import qualified Data.Text                     as T
-import           Data.Text.Metrics              ( )
+import           Data.Text.Metrics              ( damerauLevenshteinNorm
+                                                , jaro
+                                                , jaroWinkler
+                                                )
 
 import           QuickSearch.Internal.Filter    ( Entry(..)
                                                 , Token

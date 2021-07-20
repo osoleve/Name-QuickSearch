@@ -2,10 +2,16 @@ module QuickSearch.String.OneShot
     ( oneShot
     , oneShotTopNMatches
     , oneShotMatchesWithThreshold
+    , damerauLevenshteinNorm
+    , jaro
+    , jaroWinkler
     ) where
 
 import           Data.Hashable                  ( Hashable )
-import           Data.Text.Metrics              ( )
+import           Data.Text.Metrics              ( damerauLevenshteinNorm
+                                                , jaro
+                                                , jaroWinkler
+                                                )
 
 import           QuickSearch.String             ( Entry(..)
                                                 , Match
