@@ -52,6 +52,11 @@ build:
     haddock-args:
     - "--odir=./docs"
 
+ghc-options:
+    # All packages
+    "$locals": -Wall
+    "$targets": -Werror
+    "$everything": -O3
 # Override default flag values for local packages and extra-deps
 # flags: {}
 
