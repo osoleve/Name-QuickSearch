@@ -1,219 +1,302 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ViewPatterns #-}</span><span>
 </span><span id="line-2"></span><span>
 </span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">QuickSearch.Internal.Matcher</span><span>
-</span><span id="line-4"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#scoreMatches"><span class="hs-identifier">scoreMatches</span></a></span><span>
-</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Score"><span class="hs-identifier">Score</span></a></span><span>
-</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Scorer"><span class="hs-identifier">Scorer</span></a></span><span>
-</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Match"><span class="hs-identifier">Match</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
-</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#QuickSearch"><span class="hs-identifier">QuickSearch</span></a></span><span class="hs-special">(</span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#QuickSearch"><span class="hs-identifier">QuickSearch</span></a></span><span class="hs-special">)</span><span>
-</span><span id="line-9"></span><span>  </span><span class="hs-special">)</span><span>
-</span><span id="line-10"></span><span class="hs-keyword">where</span><span>
-</span><span id="line-11"></span><span>
-</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Arrow</span></span><span>               </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Arrow</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(&amp;&amp;&amp;)</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
-</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashMap.Lazy</span></span><span>           </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">HMap</span></span><span>
-</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashSet</span></span><span>                </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">HSet</span></span><span>
-</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Hashable</span></span><span>               </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Hashable</span></span><span class="hs-special">)</span><span>
-</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.List</span></span><span>                   </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">sortBy</span></span><span class="hs-special">)</span><span>
-</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Ord</span></span><span>                    </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Down</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Down</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">comparing</span></span><span class="hs-special">)</span><span>
-</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Ratio</span></span><span>                  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Ratio</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">denominator</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">numerator</span></span><span class="hs-special">)</span><span>
-</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span>                   </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
-</span><span id="line-20"></span><span>
-</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="QuickSearch.Internal.Filter.html"><span class="hs-identifier">QuickSearch.Internal.Filter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="QuickSearch.Internal.Filter.html#Entry"><span class="hs-identifier">Entry</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Filter.html#Token"><span class="hs-identifier">Token</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Filter.html#first"><span class="hs-identifier">first</span></a></span><span class="hs-special">,</span><span>
-</span><span id="line-22"></span><span>                                              </span><span class="annot"><a href="QuickSearch.Internal.Filter.html#getSearchPartition"><span class="hs-identifier">getSearchPartition</span></a></span><span class="hs-special">)</span><span>
-</span><span id="line-23"></span><span>
-</span><span id="line-24"></span><span class="hs-keyword">type</span><span> </span><span id="Score"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Score"><span class="hs-identifier hs-var">Score</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
-</span><span id="line-25"></span><span class="hs-keyword">type</span><span> </span><span id="Scorer"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Scorer"><span class="hs-identifier hs-var">Scorer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ratio</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
-</span><span id="line-26"></span><span>
-</span><span id="line-27"></span><span class="hs-keyword">data</span><span> </span><span id="Match"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Match"><span class="hs-identifier hs-var">Match</span></a></span></span><span> </span><span id="local-6989586621679051642"><span class="annot"><a href="#local-6989586621679051642"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Match"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Match"><span class="hs-identifier hs-var">Match</span></a></span></span><span> </span><span class="hs-special">{</span><span>
-</span><span id="line-28"></span><span>    </span><span id="matchScore"><span class="annot"><span class="annottext">Match a -&gt; Score
-</span><a href="QuickSearch.Internal.Matcher.html#matchScore"><span class="hs-identifier hs-var hs-var">matchScore</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Score"><span class="hs-identifier hs-type">Score</span></a></span><span>
-</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="matchEntry"><span class="annot"><span class="annottext">Match a -&gt; a
-</span><a href="QuickSearch.Internal.Matcher.html#matchEntry"><span class="hs-identifier hs-var hs-var">matchEntry</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051642"><span class="hs-identifier hs-type">a</span></a></span><span>
-</span><span id="line-30"></span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051600"><span id="local-6989586621679051602"><span id="local-6989586621679051604"><span class="annot"><span class="annottext">Score -&gt; Match a -&gt; ShowS
-[Match a] -&gt; ShowS
-Match a -&gt; String
-(Score -&gt; Match a -&gt; ShowS)
--&gt; (Match a -&gt; String) -&gt; ([Match a] -&gt; ShowS) -&gt; Show (Match a)
-forall a. Show a =&gt; Score -&gt; Match a -&gt; ShowS
-forall a. Show a =&gt; [Match a] -&gt; ShowS
-forall a. Show a =&gt; Match a -&gt; String
+</span><span id="line-4"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#scoreMatches"><span class="hs-identifier">scoreMatches</span></a></span><span>
+</span><span id="line-5"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Score"><span class="hs-identifier">Score</span></a></span><span>
+</span><span id="line-6"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Scorer"><span class="hs-identifier">Scorer</span></a></span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Match"><span class="hs-identifier">Match</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#matchScore"><span class="hs-identifier">matchScore</span></a></span><span>
+</span><span id="line-9"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#matchEntry"><span class="hs-identifier">matchEntry</span></a></span><span>
+</span><span id="line-10"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#quickSearchEntries"><span class="hs-identifier">quickSearchEntries</span></a></span><span>
+</span><span id="line-11"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#quickSearchTokenFilter"><span class="hs-identifier">quickSearchTokenFilter</span></a></span><span>
+</span><span id="line-12"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#QuickSearch"><span class="hs-identifier">QuickSearch</span></a></span><span class="hs-special">(</span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#QuickSearch"><span class="hs-identifier">QuickSearch</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Arrow</span></span><span>                  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier">Arrow</span></span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(&amp;&amp;&amp;)</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Bifunctor</span></span><span>                 </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier">Bifunctor</span></span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">first</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashMap.Lazy</span></span><span>             </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">HMap</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashSet</span></span><span>                  </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">HSet</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Hashable</span></span><span>                  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier">Hashable</span></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.List</span></span><span>                      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier">sortBy</span></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Ord</span></span><span>                       </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier">Down</span></span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Down</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>                                                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">comparing</span></span><span>
+</span><span id="line-23"></span><span>                                                </span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Ratio</span></span><span>                     </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier">Ratio</span></span><span>
+</span><span id="line-25"></span><span>                                                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">denominator</span></span><span>
+</span><span id="line-26"></span><span>                                                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">numerator</span></span><span>
+</span><span id="line-27"></span><span>                                                </span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span>                     </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="QuickSearch.Internal.Filter.html"><span class="hs-identifier">QuickSearch.Internal.Filter</span></a></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Filter.html#Entry"><span class="hs-identifier">Entry</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>                                                </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Filter.html#Token"><span class="hs-identifier">Token</span></a></span><span>
+</span><span id="line-32"></span><span>                                                </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Filter.html#entryName"><span class="hs-identifier">entryName</span></a></span><span>
+</span><span id="line-33"></span><span>                                                </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Filter.html#entryUID"><span class="hs-identifier">entryUID</span></a></span><span>
+</span><span id="line-34"></span><span>                                                </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Filter.html#getSearchPartition"><span class="hs-identifier">getSearchPartition</span></a></span><span>
+</span><span id="line-35"></span><span>                                                </span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">type</span><span> </span><span id="Score"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Score"><span class="hs-identifier hs-var">Score</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">type</span><span> </span><span id="Scorer"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Scorer"><span class="hs-identifier hs-var">Scorer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ratio</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- | Structure associating a Score with an Entry, for holding search results</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">newtype</span><span> </span><span id="Match"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Match"><span class="hs-identifier hs-var">Match</span></a></span></span><span> </span><span id="local-6989586621679051748"><span class="annot"><a href="#local-6989586621679051748"><span class="hs-identifier hs-type">score</span></a></span></span><span> </span><span id="local-6989586621679051747"><span class="annot"><a href="#local-6989586621679051747"><span class="hs-identifier hs-type">entry</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Match"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Match"><span class="hs-identifier hs-var">Match</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679051748"><span class="hs-identifier hs-type">score</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679051747"><span class="hs-identifier hs-type">entry</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051693"><span id="local-6989586621679051695"><span id="local-6989586621679051697"><span class="annot"><span class="annottext">Int -&gt; Match score entry -&gt; ShowS
+[Match score entry] -&gt; ShowS
+Match score entry -&gt; String
+(Int -&gt; Match score entry -&gt; ShowS)
+-&gt; (Match score entry -&gt; String)
+-&gt; ([Match score entry] -&gt; ShowS)
+-&gt; Show (Match score entry)
 forall a.
-(Score -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
-showList :: [Match a] -&gt; ShowS
-$cshowList :: forall a. Show a =&gt; [Match a] -&gt; ShowS
-show :: Match a -&gt; String
-$cshow :: forall a. Show a =&gt; Match a -&gt; String
-showsPrec :: Score -&gt; Match a -&gt; ShowS
-$cshowsPrec :: forall a. Show a =&gt; Score -&gt; Match a -&gt; ShowS
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall score entry.
+(Show score, Show entry) =&gt;
+Int -&gt; Match score entry -&gt; ShowS
+forall score entry.
+(Show score, Show entry) =&gt;
+[Match score entry] -&gt; ShowS
+forall score entry.
+(Show score, Show entry) =&gt;
+Match score entry -&gt; String
+showList :: [Match score entry] -&gt; ShowS
+$cshowList :: forall score entry.
+(Show score, Show entry) =&gt;
+[Match score entry] -&gt; ShowS
+show :: Match score entry -&gt; String
+$cshow :: forall score entry.
+(Show score, Show entry) =&gt;
+Match score entry -&gt; String
+showsPrec :: Int -&gt; Match score entry -&gt; ShowS
+$cshowsPrec :: forall score entry.
+(Show score, Show entry) =&gt;
+Int -&gt; Match score entry -&gt; ShowS
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
-</span><span id="line-31"></span><span>
-</span><span id="line-32"></span><span class="hs-keyword">data</span><span> </span><span id="QuickSearch"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#QuickSearch"><span class="hs-identifier hs-var">QuickSearch</span></a></span></span><span> </span><span id="local-6989586621679051598"><span class="annot"><a href="#local-6989586621679051598"><span class="hs-identifier hs-type">uid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="QuickSearch"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#QuickSearch"><span class="hs-identifier hs-var">QuickSearch</span></a></span></span><span>
-</span><span id="line-33"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="quickSearchEntries"><span class="annot"><span class="annottext">QuickSearch uid -&gt; [Entry uid]
-</span><a href="QuickSearch.Internal.Matcher.html#quickSearchEntries"><span class="hs-identifier hs-var hs-var">quickSearchEntries</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="QuickSearch.Internal.Filter.html#Entry"><span class="hs-identifier hs-type">Entry</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051598"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">]</span><span>
-</span><span id="line-34"></span><span>  </span><span class="hs-comment">-- ^ List of names and UIDs</span><span>
-</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="quickSearchTokenFilter"><span class="annot"><span class="annottext">QuickSearch uid -&gt; HashMap Token (HashSet uid)
-</span><a href="QuickSearch.Internal.Matcher.html#quickSearchTokenFilter"><span class="hs-identifier hs-var hs-var">quickSearchTokenFilter</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HMap.HashMap</span></span><span> </span><span class="annot"><a href="QuickSearch.Internal.Filter.html#Token"><span class="hs-identifier hs-type">Token</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">HSet.HashSet</span></span><span> </span><span class="annot"><a href="#local-6989586621679051598"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">)</span><span>
-</span><span id="line-36"></span><span>  </span><span class="hs-comment">-- ^ HashMap associating lists of UIDs with individual word-level tokens</span><span>
-</span><span id="line-37"></span><span>  </span><span class="hs-special">}</span><span>
-</span><span id="line-38"></span><span>
-</span><span id="line-39"></span><span class="hs-comment">{- | Given a string to search, a QuickSearch object, and a similarity function,
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- | Score accessor for Match</span><span>
+</span><span id="line-45"></span><span id="local-6989586621679051734"><span id="local-6989586621679051735"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#matchScore"><span class="hs-identifier hs-type">matchScore</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Match"><span class="hs-identifier hs-type">Match</span></a></span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Score"><span class="hs-identifier hs-type">Score</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="QuickSearch.Internal.Filter.html#Entry"><span class="hs-identifier hs-type">Entry</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051735"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051734"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Score"><span class="hs-identifier hs-type">Score</span></a></span></span></span><span>
+</span><span id="line-46"></span><span id="matchScore"><span class="annot"><span class="annottext">matchScore :: Match Int (Entry name uid) -&gt; Int
+</span><a href="QuickSearch.Internal.Matcher.html#matchScore"><span class="hs-identifier hs-var hs-var">matchScore</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Match"><span class="hs-identifier hs-type">Match</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051691"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679051691"><span class="hs-identifier hs-var">score</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Entry name uid
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679051691"><span class="hs-identifier hs-var">score</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- | Entry accessor for Match</span><span>
+</span><span id="line-49"></span><span id="local-6989586621679051689"><span id="local-6989586621679051690"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#matchEntry"><span class="hs-identifier hs-type">matchEntry</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Match"><span class="hs-identifier hs-type">Match</span></a></span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Score"><span class="hs-identifier hs-type">Score</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="QuickSearch.Internal.Filter.html#Entry"><span class="hs-identifier hs-type">Entry</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051690"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051689"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Filter.html#Entry"><span class="hs-identifier hs-type">Entry</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051690"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051689"><span class="hs-identifier hs-type">uid</span></a></span></span></span><span>
+</span><span id="line-50"></span><span id="matchEntry"><span class="annot"><span class="annottext">matchEntry :: Match Int (Entry name uid) -&gt; Entry name uid
+</span><a href="QuickSearch.Internal.Matcher.html#matchEntry"><span class="hs-identifier hs-var hs-var">matchEntry</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Match"><span class="hs-identifier hs-type">Match</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679051688"><span class="annot"><span class="annottext">entry :: Entry name uid
+</span><a href="#local-6989586621679051688"><span class="hs-identifier hs-var">entry</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="QuickSearch.Internal.Filter.html#Entry"><span class="hs-identifier hs-type">Entry</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">name
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">uid
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Entry name uid
+</span><a href="#local-6989586621679051688"><span class="hs-identifier hs-var">entry</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-comment">{- | List of entries to be searched and a HashMap associating tokens with
+   HashSets of UIDs related to entries containing the tokens.
+-}</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">newtype</span><span> </span><span id="QuickSearch"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#QuickSearch"><span class="hs-identifier hs-var">QuickSearch</span></a></span></span><span> </span><span id="local-6989586621679051686"><span class="annot"><a href="#local-6989586621679051686"><span class="hs-identifier hs-type">uid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-56"></span><span>  </span><span id="QuickSearch"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#QuickSearch"><span class="hs-identifier hs-var">QuickSearch</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="QuickSearch.Internal.Filter.html#Entry"><span class="hs-identifier hs-type">Entry</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span> </span><span class="annot"><a href="#local-6989586621679051686"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-57"></span><span>                </span><span class="annot"><span class="hs-identifier hs-type">HMap.HashMap</span></span><span> </span><span class="annot"><a href="QuickSearch.Internal.Filter.html#Token"><span class="hs-identifier hs-type">Token</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">HSet.HashSet</span></span><span> </span><span class="annot"><a href="#local-6989586621679051686"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051680"><span id="local-6989586621679051682"><span id="local-6989586621679051684"><span class="annot"><span class="annottext">Int -&gt; QuickSearch uid -&gt; ShowS
+[QuickSearch uid] -&gt; ShowS
+QuickSearch uid -&gt; String
+(Int -&gt; QuickSearch uid -&gt; ShowS)
+-&gt; (QuickSearch uid -&gt; String)
+-&gt; ([QuickSearch uid] -&gt; ShowS)
+-&gt; Show (QuickSearch uid)
+forall uid. Show uid =&gt; Int -&gt; QuickSearch uid -&gt; ShowS
+forall uid. Show uid =&gt; [QuickSearch uid] -&gt; ShowS
+forall uid. Show uid =&gt; QuickSearch uid -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [QuickSearch uid] -&gt; ShowS
+$cshowList :: forall uid. Show uid =&gt; [QuickSearch uid] -&gt; ShowS
+show :: QuickSearch uid -&gt; String
+$cshow :: forall uid. Show uid =&gt; QuickSearch uid -&gt; String
+showsPrec :: Int -&gt; QuickSearch uid -&gt; ShowS
+$cshowsPrec :: forall uid. Show uid =&gt; Int -&gt; QuickSearch uid -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- | [Entry name uid] accessor for QuickSearch</span><span>
+</span><span id="line-61"></span><span id="local-6989586621679051679"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#quickSearchEntries"><span class="hs-identifier hs-type">quickSearchEntries</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="annot"><a href="#local-6989586621679051679"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="#local-6989586621679051679"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#QuickSearch"><span class="hs-identifier hs-type">QuickSearch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051679"><span class="hs-identifier hs-type">uid</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="QuickSearch.Internal.Filter.html#Entry"><span class="hs-identifier hs-type">Entry</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span> </span><span class="annot"><a href="#local-6989586621679051679"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-62"></span><span id="quickSearchEntries"><span class="annot"><span class="annottext">quickSearchEntries :: QuickSearch uid -&gt; [Entry Text uid]
+</span><a href="QuickSearch.Internal.Matcher.html#quickSearchEntries"><span class="hs-identifier hs-var hs-var">quickSearchEntries</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#QuickSearch"><span class="hs-identifier hs-type">QuickSearch</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051678"><span class="annot"><span class="annottext">[Entry Text uid]
+</span><a href="#local-6989586621679051678"><span class="hs-identifier hs-var">entries</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">HashMap Text (HashSet uid)
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Entry Text uid]
+</span><a href="#local-6989586621679051678"><span class="hs-identifier hs-var">entries</span></a></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- | tokenFilter accessor for QuickSearch</span><span>
+</span><span id="line-66"></span><span id="local-6989586621679051677"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#quickSearchTokenFilter"><span class="hs-identifier hs-type">quickSearchTokenFilter</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="annot"><a href="#local-6989586621679051677"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="#local-6989586621679051677"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#QuickSearch"><span class="hs-identifier hs-type">QuickSearch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051677"><span class="hs-identifier hs-type">uid</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HMap.HashMap</span></span><span> </span><span class="annot"><a href="QuickSearch.Internal.Filter.html#Token"><span class="hs-identifier hs-type">Token</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">HSet.HashSet</span></span><span> </span><span class="annot"><a href="#local-6989586621679051677"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-68"></span><span id="quickSearchTokenFilter"><span class="annot"><span class="annottext">quickSearchTokenFilter :: QuickSearch uid -&gt; HashMap Text (HashSet uid)
+</span><a href="QuickSearch.Internal.Matcher.html#quickSearchTokenFilter"><span class="hs-identifier hs-var hs-var">quickSearchTokenFilter</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#QuickSearch"><span class="hs-identifier hs-type">QuickSearch</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Entry Text uid]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679051676"><span class="annot"><span class="annottext">HashMap Text (HashSet uid)
+</span><a href="#local-6989586621679051676"><span class="hs-identifier hs-var">tokenFilter</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HashMap Text (HashSet uid)
+</span><a href="#local-6989586621679051676"><span class="hs-identifier hs-var">tokenFilter</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-comment">{- | Given a string to search, a QuickSearch object, and a similarity function,
    returns potential matches contained in the QuickSearch filters and their
    associated scores, in descending order by score.
 -}</span><span>
-</span><span id="line-43"></span><span id="local-6989586621679051595"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#scoreMatches"><span class="hs-identifier hs-type">scoreMatches</span></a></span><span>
-</span><span id="line-44"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="annot"><a href="#local-6989586621679051595"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="#local-6989586621679051595"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">)</span><span>
-</span><span id="line-45"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span>  </span><span class="hs-comment">-- ^ Name or other string to be searched</span><span>
-</span><span id="line-46"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#QuickSearch"><span class="hs-identifier hs-type">QuickSearch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051595"><span class="hs-identifier hs-type">uid</span></a></span><span>  </span><span class="hs-comment">-- ^ The QuickSearch object to be used</span><span>
-</span><span id="line-47"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Scorer"><span class="hs-identifier hs-type">Scorer</span></a></span><span>  </span><span class="hs-comment">-- ^ A string distance function of type (Text -&gt; Text -&gt; Ratio Int)</span><span>
-</span><span id="line-48"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Match"><span class="hs-identifier hs-type">Match</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="QuickSearch.Internal.Filter.html#Entry"><span class="hs-identifier hs-type">Entry</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051595"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>  </span><span class="hs-comment">-- ^ A list of possible matches and their scores</span></span><span>
-</span><span id="line-49"></span><span id="scoreMatches"><span class="annot"><span class="annottext">scoreMatches :: Token -&gt; QuickSearch uid -&gt; Scorer -&gt; [Match (Entry uid)]
-</span><a href="QuickSearch.Internal.Matcher.html#scoreMatches"><span class="hs-identifier hs-var hs-var">scoreMatches</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Token -&gt; Token
-</span><span class="hs-identifier hs-var">T.toCaseFold</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span id="local-6989586621679051593"><span class="annot"><span class="annottext">Token
-</span><a href="#local-6989586621679051593"><span class="hs-identifier hs-var">entry</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679051592"><span class="annot"><span class="annottext">QuickSearch uid
-</span><a href="#local-6989586621679051592"><span class="hs-identifier hs-var">qs</span></a></span></span><span> </span><span id="local-6989586621679051591"><span class="annot"><span class="annottext">Scorer
-</span><a href="#local-6989586621679051591"><span class="hs-identifier hs-var">scorer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
-</span><span id="line-50"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679051590"><span class="annot"><span class="annottext">searchSpace :: [Entry uid]
-</span><a href="#local-6989586621679051590"><span class="hs-identifier hs-var hs-var">searchSpace</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Entry uid -&gt; Entry uid) -&gt; [Entry uid] -&gt; [Entry uid]
-forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
-</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Token -&gt; Token) -&gt; Entry uid -&gt; Entry uid
-forall uid. (Token -&gt; Token) -&gt; Entry uid -&gt; Entry uid
-</span><a href="QuickSearch.Internal.Filter.html#first"><span class="hs-identifier hs-var">first</span></a></span><span> </span><span class="annot"><span class="annottext">Token -&gt; Token
-</span><span class="hs-identifier hs-var">T.toCaseFold</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Entry uid] -&gt; [Entry uid]) -&gt; [Entry uid] -&gt; [Entry uid]
-forall a b. (a -&gt; b) -&gt; a -&gt; b
-</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Token -&gt; QuickSearch uid -&gt; [Entry uid]
+</span><span id="line-74"></span><span id="local-6989586621679051675"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#scoreMatches"><span class="hs-identifier hs-type">scoreMatches</span></a></span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="annot"><a href="#local-6989586621679051675"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="#local-6989586621679051675"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span>  </span><span class="hs-comment">-- ^ Name or other string to be searched</span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#QuickSearch"><span class="hs-identifier hs-type">QuickSearch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051675"><span class="hs-identifier hs-type">uid</span></a></span><span>  </span><span class="hs-comment">-- ^ The QuickSearch object to be used</span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Scorer"><span class="hs-identifier hs-type">Scorer</span></a></span><span>  </span><span class="hs-comment">-- ^ A string distance function of type (Text -&gt; Text -&gt; Ratio Int)</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Match"><span class="hs-identifier hs-type">Match</span></a></span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#Score"><span class="hs-identifier hs-type">Score</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="QuickSearch.Internal.Filter.html#Entry"><span class="hs-identifier hs-type">Entry</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span> </span><span class="annot"><a href="#local-6989586621679051675"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>  </span><span class="hs-comment">-- ^ A list of possible matches</span></span><span>
+</span><span id="line-80"></span><span id="scoreMatches"><span class="annot"><span class="annottext">scoreMatches :: Text -&gt; QuickSearch uid -&gt; Scorer -&gt; [Match Int (Entry Text uid)]
+</span><a href="QuickSearch.Internal.Matcher.html#scoreMatches"><span class="hs-identifier hs-var hs-var">scoreMatches</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><span class="hs-identifier hs-var">T.toCaseFold</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span id="local-6989586621679051673"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679051673"><span class="hs-identifier hs-var">entry</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679051672"><span class="annot"><span class="annottext">QuickSearch uid
+</span><a href="#local-6989586621679051672"><span class="hs-identifier hs-var">qs</span></a></span></span><span> </span><span id="local-6989586621679051671"><span class="annot"><span class="annottext">Scorer
+</span><a href="#local-6989586621679051671"><span class="hs-identifier hs-var">scorer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679051670"><span class="annot"><span class="annottext">searchSpace :: [Entry Text uid]
+</span><a href="#local-6989586621679051670"><span class="hs-identifier hs-var hs-var">searchSpace</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; QuickSearch uid -&gt; [Entry Text uid]
 forall uid.
 (Hashable uid, Eq uid) =&gt;
-Token -&gt; QuickSearch uid -&gt; [Entry uid]
-</span><a href="QuickSearch.Internal.Matcher.html#pruneSearchSpace"><span class="hs-identifier hs-var">pruneSearchSpace</span></a></span><span> </span><span class="annot"><span class="annottext">Token
-</span><a href="#local-6989586621679051593"><span class="hs-identifier hs-var">entry</span></a></span><span> </span><span class="annot"><span class="annottext">QuickSearch uid
-</span><a href="#local-6989586621679051592"><span class="hs-identifier hs-var">qs</span></a></span><span>
-</span><span id="line-51"></span><span>      </span><span id="local-6989586621679051588"><span class="annot"><span class="annottext">scoreEntry :: Entry uid -&gt; Score
-</span><a href="#local-6989586621679051588"><span class="hs-identifier hs-var hs-var">scoreEntry</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ratio Score -&gt; Score
-</span><a href="QuickSearch.Internal.Matcher.html#toPercent"><span class="hs-identifier hs-var">toPercent</span></a></span><span> </span><span class="annot"><span class="annottext">(Ratio Score -&gt; Score)
--&gt; (Entry uid -&gt; Ratio Score) -&gt; Entry uid -&gt; Score
+Text -&gt; QuickSearch uid -&gt; [Entry Text uid]
+</span><a href="QuickSearch.Internal.Matcher.html#pruneSearchSpace"><span class="hs-identifier hs-var">pruneSearchSpace</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679051673"><span class="hs-identifier hs-var">entry</span></a></span><span> </span><span class="annot"><span class="annottext">QuickSearch uid
+</span><a href="#local-6989586621679051672"><span class="hs-identifier hs-var">qs</span></a></span><span>
+</span><span id="line-82"></span><span>        </span><span id="local-6989586621679051668"><span class="annot"><span class="annottext">searchSpace' :: [Entry Text uid]
+</span><a href="#local-6989586621679051668"><span class="hs-identifier hs-var hs-var">searchSpace'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Entry Text uid -&gt; Entry Text uid)
+-&gt; [Entry Text uid] -&gt; [Entry Text uid]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Entry Text uid -&gt; Entry Text uid
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><span class="hs-identifier hs-var">first</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><span class="hs-identifier hs-var">T.toCaseFold</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Entry Text uid]
+</span><a href="#local-6989586621679051670"><span class="hs-identifier hs-var">searchSpace</span></a></span><span>
+</span><span id="line-83"></span><span>        </span><span id="local-6989586621679051667"><span class="annot"><span class="annottext">scoreEntry :: Entry Text uid -&gt; Int
+</span><a href="#local-6989586621679051667"><span class="hs-identifier hs-var hs-var">scoreEntry</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ratio Int -&gt; Int
+</span><a href="QuickSearch.Internal.Matcher.html#toPercent"><span class="hs-identifier hs-var">toPercent</span></a></span><span> </span><span class="annot"><span class="annottext">(Ratio Int -&gt; Int)
+-&gt; (Entry Text uid -&gt; Ratio Int) -&gt; Entry Text uid -&gt; Int
 forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
 </span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Scorer
-</span><a href="#local-6989586621679051591"><span class="hs-identifier hs-var">scorer</span></a></span><span> </span><span class="annot"><span class="annottext">Token
-</span><a href="#local-6989586621679051593"><span class="hs-identifier hs-var">entry</span></a></span><span> </span><span class="annot"><span class="annottext">(Token -&gt; Ratio Score)
--&gt; (Entry uid -&gt; Token) -&gt; Entry uid -&gt; Ratio Score
+</span><a href="#local-6989586621679051671"><span class="hs-identifier hs-var">scorer</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679051673"><span class="hs-identifier hs-var">entry</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Ratio Int)
+-&gt; (Entry Text uid -&gt; Text) -&gt; Entry Text uid -&gt; Ratio Int
 forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
-</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Entry uid -&gt; Token
-forall uid. Entry uid -&gt; Token
-</span><a href="QuickSearch.Internal.Filter.html#entryName"><span class="hs-identifier hs-var hs-var">entryName</span></a></span><span>
-</span><span id="line-52"></span><span>      </span><span id="local-6989586621679051584"><span class="annot"><span class="annottext">results :: [Match (Entry uid)]
-</span><a href="#local-6989586621679051584"><span class="hs-identifier hs-var hs-var">results</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Entry uid -&gt; Match (Entry uid))
--&gt; [Entry uid] -&gt; [Match (Entry uid)]
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Entry Text uid -&gt; Text
+forall uid name. (Hashable uid, Eq uid) =&gt; Entry name uid -&gt; name
+</span><a href="QuickSearch.Internal.Filter.html#entryName"><span class="hs-identifier hs-var">entryName</span></a></span><span>
+</span><span id="line-84"></span><span>        </span><span id="local-6989586621679051664"><span class="annot"><span class="annottext">results :: [Match Int (Entry Text uid)]
+</span><a href="#local-6989586621679051664"><span class="hs-identifier hs-var hs-var">results</span></a></span></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Entry Text uid -&gt; Match Int (Entry Text uid))
+-&gt; [Entry Text uid] -&gt; [Match Int (Entry Text uid)]
 forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
-</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Score -&gt; Entry uid -&gt; Match (Entry uid))
--&gt; (Score, Entry uid) -&gt; Match (Entry uid)
-forall a b c. (a -&gt; b -&gt; c) -&gt; (a, b) -&gt; c
-</span><span class="hs-identifier hs-var">uncurry</span></span><span> </span><span class="annot"><span class="annottext">Score -&gt; Entry uid -&gt; Match (Entry uid)
-forall a. Score -&gt; a -&gt; Match a
-</span><a href="QuickSearch.Internal.Matcher.html#Match"><span class="hs-identifier hs-var">Match</span></a></span><span> </span><span class="annot"><span class="annottext">((Score, Entry uid) -&gt; Match (Entry uid))
--&gt; (Entry uid -&gt; (Score, Entry uid))
--&gt; Entry uid
--&gt; Match (Entry uid)
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Int, Entry Text uid) -&gt; Match Int (Entry Text uid)
+forall score entry. (score, entry) -&gt; Match score entry
+</span><a href="QuickSearch.Internal.Matcher.html#Match"><span class="hs-identifier hs-var">Match</span></a></span><span> </span><span class="annot"><span class="annottext">((Int, Entry Text uid) -&gt; Match Int (Entry Text uid))
+-&gt; (Entry Text uid -&gt; (Int, Entry Text uid))
+-&gt; Entry Text uid
+-&gt; Match Int (Entry Text uid)
 forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
-</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Entry uid -&gt; Score
-forall uid. Entry uid -&gt; Score
-</span><a href="#local-6989586621679051588"><span class="hs-identifier hs-var">scoreEntry</span></a></span><span> </span><span class="annot"><span class="annottext">(Entry uid -&gt; Score)
--&gt; (Entry uid -&gt; Entry uid) -&gt; Entry uid -&gt; (Score, Entry uid)
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Entry Text uid -&gt; Int
+</span><a href="#local-6989586621679051667"><span class="hs-identifier hs-var">scoreEntry</span></a></span><span> </span><span class="annot"><span class="annottext">(Entry Text uid -&gt; Int)
+-&gt; (Entry Text uid -&gt; Entry Text uid)
+-&gt; Entry Text uid
+-&gt; (Int, Entry Text uid)
 forall (a :: * -&gt; * -&gt; *) b c c'.
 Arrow a =&gt;
 a b c -&gt; a b c' -&gt; a b (c, c')
-</span><span class="hs-operator hs-var">&amp;&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Entry uid -&gt; Entry uid
+</span><span class="hs-operator hs-var">&amp;&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Entry Text uid -&gt; Entry Text uid
 forall a. a -&gt; a
-</span><span class="hs-identifier hs-var">id</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Entry uid]
-</span><a href="#local-6989586621679051590"><span class="hs-identifier hs-var">searchSpace</span></a></span><span>
-</span><span id="line-53"></span><span>  </span><span class="hs-keyword">in</span><span>  </span><span class="annot"><span class="annottext">(Match (Entry uid) -&gt; Match (Entry uid) -&gt; Ordering)
--&gt; [Match (Entry uid)] -&gt; [Match (Entry uid)]
+</span><span class="hs-identifier hs-var">id</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Entry Text uid]
+</span><a href="#local-6989586621679051668"><span class="hs-identifier hs-var">searchSpace'</span></a></span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-keyword">in</span><span>  </span><span class="annot"><span class="annottext">(Match Int (Entry Text uid)
+ -&gt; Match Int (Entry Text uid) -&gt; Ordering)
+-&gt; [Match Int (Entry Text uid)] -&gt; [Match Int (Entry Text uid)]
 forall a. (a -&gt; a -&gt; Ordering) -&gt; [a] -&gt; [a]
-</span><span class="hs-identifier hs-var">sortBy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Match (Entry uid) -&gt; Down Score)
--&gt; Match (Entry uid) -&gt; Match (Entry uid) -&gt; Ordering
+</span><span class="hs-identifier hs-var">sortBy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Match Int (Entry Text uid) -&gt; Down Int)
+-&gt; Match Int (Entry Text uid)
+-&gt; Match Int (Entry Text uid)
+-&gt; Ordering
 forall a b. Ord a =&gt; (b -&gt; a) -&gt; b -&gt; b -&gt; Ordering
-</span><span class="hs-identifier hs-var">comparing</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Score -&gt; Down Score
+</span><span class="hs-identifier hs-var">comparing</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Down Int
 forall a. a -&gt; Down a
-</span><span class="hs-identifier hs-var">Down</span></span><span> </span><span class="annot"><span class="annottext">(Score -&gt; Down Score)
--&gt; (Match (Entry uid) -&gt; Score) -&gt; Match (Entry uid) -&gt; Down Score
+</span><span class="hs-identifier hs-var">Down</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Down Int)
+-&gt; (Match Int (Entry Text uid) -&gt; Int)
+-&gt; Match Int (Entry Text uid)
+-&gt; Down Int
 forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
-</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Match (Entry uid) -&gt; Score
-forall a. Match a -&gt; Score
-</span><a href="QuickSearch.Internal.Matcher.html#matchScore"><span class="hs-identifier hs-var hs-var">matchScore</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Match (Entry uid)]
-</span><a href="#local-6989586621679051584"><span class="hs-identifier hs-var">results</span></a></span><span>
-</span><span id="line-54"></span><span class="hs-comment">-- ^ Ignore the linter here, this is a performance thing</span><span>
-</span><span id="line-55"></span><span>
-</span><span id="line-56"></span><span class="hs-comment">{- | Given a string and a QuickSearch object, return the list of entries
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Match Int (Entry Text uid) -&gt; Int
+forall name uid. Match Int (Entry name uid) -&gt; Int
+</span><a href="QuickSearch.Internal.Matcher.html#matchScore"><span class="hs-identifier hs-var">matchScore</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Match Int (Entry Text uid)]
+</span><a href="#local-6989586621679051664"><span class="hs-identifier hs-var">results</span></a></span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- ^ Ignore the linter here, this is a performance thing</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-comment">{- | Given a string and a QuickSearch object, return the list of entries
    from within the QuickSearch that share a full token with the target string
 -}</span><span>
-</span><span id="line-59"></span><span id="local-6989586621679051652"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#pruneSearchSpace"><span class="hs-identifier hs-type">pruneSearchSpace</span></a></span><span>
-</span><span id="line-60"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="annot"><a href="#local-6989586621679051652"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="#local-6989586621679051652"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span>  </span><span class="hs-comment">-- ^ Name or other string to be searched</span><span>
-</span><span id="line-61"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#QuickSearch"><span class="hs-identifier hs-type">QuickSearch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051652"><span class="hs-identifier hs-type">uid</span></a></span><span>  </span><span class="hs-comment">-- ^ The QuickSearch object to be used</span><span>
-</span><span id="line-62"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="QuickSearch.Internal.Filter.html#Entry"><span class="hs-identifier hs-type">Entry</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051652"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">]</span><span>  </span><span class="hs-comment">-- ^ A list of strings to search through and their UIDs</span></span><span>
-</span><span id="line-63"></span><span id="pruneSearchSpace"><span class="annot"><span class="annottext">pruneSearchSpace :: Token -&gt; QuickSearch uid -&gt; [Entry uid]
-</span><a href="QuickSearch.Internal.Matcher.html#pruneSearchSpace"><span class="hs-identifier hs-var hs-var">pruneSearchSpace</span></a></span></span><span> </span><span id="local-6989586621679051581"><span class="annot"><span class="annottext">Token
-</span><a href="#local-6989586621679051581"><span class="hs-identifier hs-var">entry</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#QuickSearch"><span class="hs-identifier hs-type">QuickSearch</span></a></span><span> </span><span id="local-6989586621679051580"><span class="annot"><span class="annottext">[Entry uid]
-</span><a href="#local-6989586621679051580"><span class="hs-identifier hs-var">entries</span></a></span></span><span> </span><span id="local-6989586621679051579"><span class="annot"><span class="annottext">HashMap Token (HashSet uid)
-</span><a href="#local-6989586621679051579"><span class="hs-identifier hs-var">tokenFilter</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
-</span><span id="line-64"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679051578"><span class="annot"><span class="annottext">uidPartition :: HashSet uid
-</span><a href="#local-6989586621679051578"><span class="hs-identifier hs-var hs-var">uidPartition</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Token -&gt; HashMap Token (HashSet uid) -&gt; HashSet uid
+</span><span id="line-91"></span><span id="local-6989586621679051762"><span class="annot"><a href="QuickSearch.Internal.Matcher.html#pruneSearchSpace"><span class="hs-identifier hs-type">pruneSearchSpace</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Hashable</span></span><span> </span><span class="annot"><a href="#local-6989586621679051762"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="#local-6989586621679051762"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span>  </span><span class="hs-comment">-- ^ Name or other string to be searched</span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#QuickSearch"><span class="hs-identifier hs-type">QuickSearch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051762"><span class="hs-identifier hs-type">uid</span></a></span><span>  </span><span class="hs-comment">-- ^ The QuickSearch object to be used</span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="QuickSearch.Internal.Filter.html#Entry"><span class="hs-identifier hs-type">Entry</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span> </span><span class="annot"><a href="#local-6989586621679051762"><span class="hs-identifier hs-type">uid</span></a></span><span class="hs-special">]</span><span>  </span><span class="hs-comment">-- ^ A list of strings to search through and their UIDs</span></span><span>
+</span><span id="line-96"></span><span id="pruneSearchSpace"><span class="annot"><span class="annottext">pruneSearchSpace :: Text -&gt; QuickSearch uid -&gt; [Entry Text uid]
+</span><a href="QuickSearch.Internal.Matcher.html#pruneSearchSpace"><span class="hs-identifier hs-var hs-var">pruneSearchSpace</span></a></span></span><span> </span><span id="local-6989586621679051662"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679051662"><span class="hs-identifier hs-var">entry</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#QuickSearch"><span class="hs-identifier hs-type">QuickSearch</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051661"><span class="annot"><span class="annottext">[Entry Text uid]
+</span><a href="#local-6989586621679051661"><span class="hs-identifier hs-var">entries</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679051660"><span class="annot"><span class="annottext">HashMap Text (HashSet uid)
+</span><a href="#local-6989586621679051660"><span class="hs-identifier hs-var">tokenFilter</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679051659"><span class="annot"><span class="annottext">uidPartition :: HashSet uid
+</span><a href="#local-6989586621679051659"><span class="hs-identifier hs-var hs-var">uidPartition</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; HashMap Text (HashSet uid) -&gt; HashSet uid
 forall uid.
 (Hashable uid, Eq uid) =&gt;
-Token -&gt; HashMap Token (HashSet uid) -&gt; HashSet uid
-</span><a href="QuickSearch.Internal.Filter.html#getSearchPartition"><span class="hs-identifier hs-var">getSearchPartition</span></a></span><span> </span><span class="annot"><span class="annottext">Token
-</span><a href="#local-6989586621679051581"><span class="hs-identifier hs-var">entry</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Token (HashSet uid)
-</span><a href="#local-6989586621679051579"><span class="hs-identifier hs-var">tokenFilter</span></a></span><span>
-</span><span id="line-65"></span><span>  </span><span class="hs-keyword">in</span><span>  </span><span class="annot"><span class="annottext">(Entry uid -&gt; Bool) -&gt; [Entry uid] -&gt; [Entry uid]
+Text -&gt; HashMap Text (HashSet uid) -&gt; HashSet uid
+</span><a href="QuickSearch.Internal.Filter.html#getSearchPartition"><span class="hs-identifier hs-var">getSearchPartition</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679051662"><span class="hs-identifier hs-var">entry</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Text (HashSet uid)
+</span><a href="#local-6989586621679051660"><span class="hs-identifier hs-var">tokenFilter</span></a></span><span>
+</span><span id="line-98"></span><span>    </span><span class="hs-keyword">in</span><span>  </span><span class="annot"><span class="annottext">(Entry Text uid -&gt; Bool) -&gt; [Entry Text uid] -&gt; [Entry Text uid]
 forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
 </span><span class="hs-identifier hs-var">filter</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">uid -&gt; HashSet uid -&gt; Bool
 forall a. (Eq a, Hashable a) =&gt; a -&gt; HashSet a -&gt; Bool
 </span><span class="hs-operator hs-var">`HSet.member`</span></span><span> </span><span class="annot"><span class="annottext">HashSet uid
-</span><a href="#local-6989586621679051578"><span class="hs-identifier hs-var">uidPartition</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(uid -&gt; Bool) -&gt; (Entry uid -&gt; uid) -&gt; Entry uid -&gt; Bool
+</span><a href="#local-6989586621679051659"><span class="hs-identifier hs-var">uidPartition</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(uid -&gt; Bool) -&gt; (Entry Text uid -&gt; uid) -&gt; Entry Text uid -&gt; Bool
 forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
-</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Entry uid -&gt; uid
-forall uid. Entry uid -&gt; uid
-</span><a href="QuickSearch.Internal.Filter.html#entryUID"><span class="hs-identifier hs-var hs-var">entryUID</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Entry uid]
-</span><a href="#local-6989586621679051580"><span class="hs-identifier hs-var">entries</span></a></span><span>
-</span><span id="line-66"></span><span>
-</span><span id="line-67"></span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#toPercent"><span class="hs-identifier hs-type">toPercent</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ratio</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
-</span><span id="line-68"></span><span id="toPercent"><span class="annot"><span class="annottext">toPercent :: Ratio Score -&gt; Score
-</span><a href="QuickSearch.Internal.Matcher.html#toPercent"><span class="hs-identifier hs-var hs-var">toPercent</span></a></span></span><span> </span><span id="local-6989586621679051575"><span class="annot"><span class="annottext">Ratio Score
-</span><a href="#local-6989586621679051575"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Score
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Entry Text uid -&gt; uid
+forall uid name. (Hashable uid, Eq uid) =&gt; Entry name uid -&gt; uid
+</span><a href="QuickSearch.Internal.Filter.html#entryUID"><span class="hs-identifier hs-var">entryUID</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Entry Text uid]
+</span><a href="#local-6989586621679051661"><span class="hs-identifier hs-var">entries</span></a></span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span class="annot"><a href="QuickSearch.Internal.Matcher.html#toPercent"><span class="hs-identifier hs-type">toPercent</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ratio</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-101"></span><span id="toPercent"><span class="annot"><span class="annottext">toPercent :: Ratio Int -&gt; Int
+</span><a href="QuickSearch.Internal.Matcher.html#toPercent"><span class="hs-identifier hs-var hs-var">toPercent</span></a></span></span><span> </span><span id="local-6989586621679051657"><span class="annot"><span class="annottext">Ratio Int
+</span><a href="#local-6989586621679051657"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Int
 forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
-</span><span class="hs-identifier hs-var">floor</span></span><span> </span><span class="annot"><span class="annottext">(Double -&gt; Score) -&gt; Double -&gt; Score
+</span><span class="hs-identifier hs-var">floor</span></span><span> </span><span class="annot"><span class="annottext">(Double -&gt; Int) -&gt; Double -&gt; Int
 forall a b. (a -&gt; b) -&gt; a -&gt; b
 </span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double
-</span><a href="#local-6989586621679051573"><span class="hs-identifier hs-var">num</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+</span><a href="#local-6989586621679051655"><span class="hs-identifier hs-var">num</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
 forall a. Fractional a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">/</span></span><span> </span><span class="annot"><span class="annottext">Double
-</span><a href="#local-6989586621679051571"><span class="hs-identifier hs-var">denom</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+</span><a href="#local-6989586621679051653"><span class="hs-identifier hs-var">denom</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
 forall a. Num a =&gt; a -&gt; a -&gt; a
-</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Double
-</span><span class="hs-number">100</span></span><span>
-</span><span id="line-69"></span><span> </span><span class="hs-keyword">where</span><span>
-</span><span id="line-70"></span><span>  </span><span id="local-6989586621679051569"><span class="annot"><span class="annottext">ratioToIntPair :: Ratio Score -&gt; (Double, Double)
-</span><a href="#local-6989586621679051569"><span class="hs-identifier hs-var hs-var">ratioToIntPair</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Score -&gt; Double
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">100</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Double</span></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-103"></span><span>    </span><span id="local-6989586621679051651"><span class="annot"><span class="annottext">ratioToIntPair :: Ratio Int -&gt; (Double, Double)
+</span><a href="#local-6989586621679051651"><span class="hs-identifier hs-var hs-var">ratioToIntPair</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Double
 forall a b. (Integral a, Num b) =&gt; a -&gt; b
-</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">(Score -&gt; Double)
--&gt; (Ratio Score -&gt; Score) -&gt; Ratio Score -&gt; Double
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Double) -&gt; (Ratio Int -&gt; Int) -&gt; Ratio Int -&gt; Double
 forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
-</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Ratio Score -&gt; Score
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Ratio Int -&gt; Int
 forall a. Ratio a -&gt; a
-</span><span class="hs-identifier hs-var">numerator</span></span><span> </span><span class="annot"><span class="annottext">(Ratio Score -&gt; Double)
--&gt; (Ratio Score -&gt; Double) -&gt; Ratio Score -&gt; (Double, Double)
+</span><span class="hs-identifier hs-var">numerator</span></span><span> </span><span class="annot"><span class="annottext">(Ratio Int -&gt; Double)
+-&gt; (Ratio Int -&gt; Double) -&gt; Ratio Int -&gt; (Double, Double)
 forall (a :: * -&gt; * -&gt; *) b c c'.
 Arrow a =&gt;
 a b c -&gt; a b c' -&gt; a b (c, c')
-</span><span class="hs-operator hs-var">&amp;&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Score -&gt; Double
+</span><span class="hs-operator hs-var">&amp;&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Double
 forall a b. (Integral a, Num b) =&gt; a -&gt; b
-</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">(Score -&gt; Double)
--&gt; (Ratio Score -&gt; Score) -&gt; Ratio Score -&gt; Double
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Double) -&gt; (Ratio Int -&gt; Int) -&gt; Ratio Int -&gt; Double
 forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
-</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Ratio Score -&gt; Score
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Ratio Int -&gt; Int
 forall a. Ratio a -&gt; a
 </span><span class="hs-identifier hs-var">denominator</span></span><span>
-</span><span id="line-71"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679051573"><span class="annot"><span class="annottext">Double
-</span><a href="#local-6989586621679051573"><span class="hs-identifier hs-var">num</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679051571"><span class="annot"><span class="annottext">Double
-</span><a href="#local-6989586621679051571"><span class="hs-identifier hs-var">denom</span></a></span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ratio Score -&gt; (Double, Double)
-</span><a href="#local-6989586621679051569"><span class="hs-identifier hs-var">ratioToIntPair</span></a></span><span> </span><span class="annot"><span class="annottext">Ratio Score
-</span><a href="#local-6989586621679051575"><span class="hs-identifier hs-var">r</span></a></span><span>
-</span><span id="line-72"></span></pre></body></html>
+</span><span id="line-104"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679051655"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679051655"><span class="hs-identifier hs-var">num</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679051653"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679051653"><span class="hs-identifier hs-var">denom</span></a></span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ratio Int -&gt; (Double, Double)
+</span><a href="#local-6989586621679051651"><span class="hs-identifier hs-var">ratioToIntPair</span></a></span><span> </span><span class="annot"><span class="annottext">Ratio Int
+</span><a href="#local-6989586621679051657"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-105"></span></pre></body></html>

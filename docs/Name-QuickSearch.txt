@@ -5,25 +5,50 @@
 -- | Please see the README on GitHub at
 --   <a>https://github.com/osoleve/Name-QuickSearch#readme</a>
 @package Name-QuickSearch
-@version 0.1.0.0
+@version 0.2.0.0
 
 module QuickSearch.Internal.Filter
 
 -- | Given the list of entries to be held by QuickSearch, return a HashMap
 --   keyed on tokens from the strings in the entries, where the associated
 --   HashMap value is the list of uids of entries containing the token.
-buildTokenPartitions :: (Hashable uid, Eq uid) => [Entry uid] -> HashMap Token (HashSet uid)
+buildTokenPartitions :: (Hashable uid, Eq uid) => [Entry Text uid] -> HashMap Token (HashSet uid)
 
 -- | Given a target string and a Token HashMap, return the union of sets of
 --   uids associated with the tokens in the target string
 getSearchPartition :: (Hashable uid, Eq uid) => Text -> HashMap Token (HashSet uid) -> HashSet uid
 type Token = Text
-data Entry uid
-Entry :: Text -> uid -> Entry uid
-[entryName] :: Entry uid -> Text
-[entryUID] :: Entry uid -> uid
-first :: (Text -> Text) -> Entry uid -> Entry uid
-instance GHC.Show.Show uid => GHC.Show.Show (QuickSearch.Internal.Filter.Entry uid)
+
+-- | Structure associating a name with its unique identifier
+newtype Entry name uid
+Entry :: (name, uid) -> Entry name uid
+
+-- | Name accessor for an Entry
+entryName :: (Hashable uid, Eq uid) => Entry name uid -> name
+
+-- | UID accessor for an Entry
+entryUID :: (Hashable uid, Eq uid) => Entry name uid -> uid
+
+-- | Map covariantly over the first argument.
+--   
+--   <pre>
+--   <a>first</a> f ≡ <a>bimap</a> f <a>id</a>
+--   </pre>
+--   
+--   <h4><b>Examples</b></h4>
+--   
+--   <pre>
+--   &gt;&gt;&gt; first toUpper ('j', 3)
+--   ('J',3)
+--   </pre>
+--   
+--   <pre>
+--   &gt;&gt;&gt; first toUpper (Left 'j')
+--   Left 'J'
+--   </pre>
+first :: Bifunctor p => (a -> b) -> p a c -> p b c
+instance (GHC.Show.Show name, GHC.Show.Show uid) => GHC.Show.Show (QuickSearch.Internal.Filter.Entry name uid)
+instance Data.Bifunctor.Bifunctor QuickSearch.Internal.Filter.Entry
 
 module QuickSearch.Internal.Matcher
 
@@ -32,16 +57,35 @@ module QuickSearch.Internal.Matcher
 --   Given a string to search, a QuickSearch object, and a similarity
 --   function, returns potential matches contained in the QuickSearch
 --   filters and their associated scores, in descending order by score.
-scoreMatches :: (Hashable uid, Eq uid) => Text -> QuickSearch uid -> Scorer -> [Match (Entry uid)]
+scoreMatches :: (Hashable uid, Eq uid) => Text -> QuickSearch uid -> Scorer -> [Match Score (Entry Text uid)]
 type Score = Int
 type Scorer = (Text -> Text -> Ratio Int)
-data Match a
-Match :: Score -> a -> Match a
-[matchScore] :: Match a -> Score
-[matchEntry] :: Match a -> a
-data QuickSearch uid
-QuickSearch :: [Entry uid] -> HashMap Token (HashSet uid) -> QuickSearch uid
-instance GHC.Show.Show a => GHC.Show.Show (QuickSearch.Internal.Matcher.Match a)
+
+-- | Structure associating a Score with an Entry, for holding search
+--   results
+newtype Match score entry
+Match :: (score, entry) -> Match score entry
+
+-- | Score accessor for Match
+matchScore :: Match Score (Entry name uid) -> Score
+
+-- | Entry accessor for Match
+matchEntry :: Match Score (Entry name uid) -> Entry name uid
+
+-- | <ul>
+--   <li><i>Entry name uid</i> accessor for QuickSearch</li>
+--   </ul>
+quickSearchEntries :: (Hashable uid, Eq uid) => QuickSearch uid -> [Entry Text uid]
+
+-- | tokenFilter accessor for QuickSearch
+quickSearchTokenFilter :: (Hashable uid, Eq uid) => QuickSearch uid -> HashMap Token (HashSet uid)
+
+-- | List of entries to be searched and a HashMap associating tokens with
+--   HashSets of UIDs related to entries containing the tokens.
+newtype QuickSearch uid
+QuickSearch :: ([Entry Text uid], HashMap Token (HashSet uid)) -> QuickSearch uid
+instance (GHC.Show.Show score, GHC.Show.Show entry) => GHC.Show.Show (QuickSearch.Internal.Matcher.Match score entry)
+instance GHC.Show.Show uid => GHC.Show.Show (QuickSearch.Internal.Matcher.QuickSearch uid)
 
 module QuickSearch
 
@@ -49,53 +93,66 @@ module QuickSearch
 --   QuickSearch object.
 buildQuickSearch :: (Hashable uid, Eq uid) => [(Text, uid)] -> QuickSearch uid
 
+-- | Given a list of entries to be searched, create a QuickSearch object.
+rawBuildQuickSearch :: (Hashable uid, Eq uid) => [Entry Text uid] -> QuickSearch uid
+
 -- | Given a QuickSearch object, scorer, and string, return all matches
 --   with a score greater than the given threshold.
-matchesWithThreshold :: (Hashable uid, Eq uid) => QuickSearch uid -> Int -> Scorer -> Text -> [Match (Entry uid)]
+matchesWithThreshold :: (Hashable uid, Eq uid) => QuickSearch uid -> Int -> Scorer -> Text -> [Match Score (Entry Text uid)]
 
 -- | Given a QuickSearch object, scorer, and string, return the top N
 --   matches.
-topNMatches :: (Hashable uid, Eq uid) => QuickSearch uid -> Int -> Scorer -> Text -> [Match (Entry uid)]
+topNMatches :: (Hashable uid, Eq uid) => QuickSearch uid -> Int -> Scorer -> Text -> [Match Score (Entry Text uid)]
 
 -- | Turn a match retrieval function into one that works on lists of
 --   entries.
-batch :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => (QuickSearch uid2 -> Int -> Scorer -> Text -> [Match (Entry uid2)]) -> QuickSearch uid2 -> Int -> Scorer -> [(Text, uid1)] -> [(Entry uid1, [Match (Entry uid2)])]
+batch :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => (QuickSearch uid2 -> Int -> Scorer -> Text -> [Match Score (Entry Text uid2)]) -> QuickSearch uid2 -> Int -> Scorer -> [(Text, uid1)] -> [(Entry Text uid1, [Match Score (Entry Text uid2)])]
 
 -- | Version of topNMatches that processes lists of entries instead of
 --   strings.
-batchTopNMatches :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => QuickSearch uid2 -> Int -> Scorer -> [(Text, uid1)] -> [(Entry uid1, [Match (Entry uid2)])]
+batchTopNMatches :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => QuickSearch uid2 -> Int -> Scorer -> [(Text, uid1)] -> [(Entry Text uid1, [Match Score (Entry Text uid2)])]
 
 -- | Version of matchesWithThreshold that processes lists of entries
 --   instead of strings.
-batchMatchesWithThreshold :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => QuickSearch uid2 -> Int -> Scorer -> [(Text, uid1)] -> [(Entry uid1, [Match (Entry uid2)])]
+batchMatchesWithThreshold :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => QuickSearch uid2 -> Int -> Scorer -> [(Text, uid1)] -> [(Entry Text uid1, [Match Score (Entry Text uid2)])]
 type Token = Text
 type Score = Int
 type Scorer = (Text -> Text -> Ratio Int)
-data Entry uid
-Entry :: Text -> uid -> Entry uid
-[entryName] :: Entry uid -> Text
-[entryUID] :: Entry uid -> uid
-data Match a
-Match :: Score -> a -> Match a
-[matchScore] :: Match a -> Score
-[matchEntry] :: Match a -> a
-data QuickSearch uid
-QuickSearch :: [Entry uid] -> HashMap Token (HashSet uid) -> QuickSearch uid
+
+-- | Structure associating a name with its unique identifier
+newtype Entry name uid
+Entry :: (name, uid) -> Entry name uid
+
+-- | Name accessor for an Entry
+entryName :: (Hashable uid, Eq uid) => Entry name uid -> name
+
+-- | UID accessor for an Entry
+entryUID :: (Hashable uid, Eq uid) => Entry name uid -> uid
+
+-- | Structure associating a Score with an Entry, for holding search
+--   results
+newtype Match score entry
+Match :: (score, entry) -> Match score entry
+
+-- | List of entries to be searched and a HashMap associating tokens with
+--   HashSets of UIDs related to entries containing the tokens.
+newtype QuickSearch uid
+QuickSearch :: ([Entry Text uid], HashMap Token (HashSet uid)) -> QuickSearch uid
 
 module QuickSearch.OneShot
 
 -- | Turn a match retrieval function into a one-shot batch function.
 --   Instead of creating a QuickSearch for reuse, this creates it in the
 --   background and discards it when done.
-oneShot :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => (QuickSearch uid2 -> Int -> Scorer -> Text -> [Match (Entry uid2)]) -> Int -> [(Text, uid1)] -> [(Text, uid2)] -> Scorer -> [(Entry uid1, [Match (Entry uid2)])]
+oneShot :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => (QuickSearch uid2 -> Int -> Scorer -> Text -> [Match Score (Entry Text uid2)]) -> Int -> [(Text, uid1)] -> [(Text, uid2)] -> Scorer -> [(Entry Text uid1, [Match Score (Entry Text uid2)])]
 
 -- | One-shot version of topNMatches. Builds the QuickSearch in the
 --   background and discards it when finished.
-oneShotTopNMatches :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => Int -> [(Text, uid1)] -> [(Text, uid2)] -> Scorer -> [(Entry uid1, [Match (Entry uid2)])]
+oneShotTopNMatches :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => Int -> [(Text, uid1)] -> [(Text, uid2)] -> Scorer -> [(Entry Text uid1, [Match Score (Entry Text uid2)])]
 
 -- | One-shot version of matchesWithThreshold. Builds the QuickSearch in
 --   the background and discards it when finished.
-oneShotMatchesWithThreshold :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => Int -> [(Text, uid1)] -> [(Text, uid2)] -> Scorer -> [(Entry uid1, [Match (Entry uid2)])]
+oneShotMatchesWithThreshold :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => Int -> [(Text, uid1)] -> [(Text, uid2)] -> Scorer -> [(Entry Text uid1, [Match Score (Entry Text uid2)])]
 
 -- | Return Jaro distance between two <a>Text</a> values. Returned value is
 --   in the range from 0 (no similarity) to 1 (exact match).
@@ -149,48 +206,56 @@ module QuickSearch.String
 --   QuickSearch object.
 buildQuickSearch :: (Hashable uid, Eq uid) => [(String, uid)] -> QuickSearch uid
 
+-- | Given a list of entries to be searched, create a QuickSearch object.
+rawBuildQuickSearch :: (Hashable uid, Eq uid) => [Entry String uid] -> QuickSearch uid
+
 -- | Given a QuickSearch object, scorer, and string, return the top N
 --   matches.
-topNMatches :: (Hashable uid, Eq uid) => QuickSearch uid -> Int -> Scorer -> String -> [Match (SEntry uid)]
+topNMatches :: (Hashable uid, Eq uid) => QuickSearch uid -> Int -> Scorer -> String -> [Match Score (Entry String uid)]
 
 -- | Given a QuickSearch object, scorer, and string, return all matches
 --   with a score greater than the given threshold.
-matchesWithThreshold :: (Hashable uid, Eq uid) => QuickSearch uid -> Int -> Scorer -> String -> [Match (SEntry uid)]
+matchesWithThreshold :: (Hashable uid, Eq uid) => QuickSearch uid -> Int -> Scorer -> String -> [Match Score (Entry String uid)]
 
 -- | Turn a match retrieval function into one that works on lists of
 --   entries.
-batch :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => (QuickSearch uid2 -> Int -> Scorer -> String -> [Match (SEntry uid2)]) -> QuickSearch uid2 -> Int -> Scorer -> [(String, uid1)] -> [(SEntry uid1, [Match (SEntry uid2)])]
+batch :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => (QuickSearch uid2 -> Int -> Scorer -> String -> [Match Score (Entry String uid2)]) -> QuickSearch uid2 -> Int -> Scorer -> [(String, uid1)] -> [(Entry String uid1, [Match Score (Entry String uid2)])]
 
 -- | Version of topNMatches that processes lists of entries instead of
 --   strings.
-batchTopNMatches :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => QuickSearch uid2 -> Int -> Scorer -> [(String, uid1)] -> [(SEntry uid1, [Match (SEntry uid2)])]
+batchTopNMatches :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => QuickSearch uid2 -> Int -> Scorer -> [(String, uid1)] -> [(Entry String uid1, [Match Score (Entry String uid2)])]
 
 -- | Version of matchesWithThreshold that processes lists of entries
 --   instead of strings.
-batchMatchesWithThreshold :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => QuickSearch uid2 -> Int -> Scorer -> [(String, uid1)] -> [(SEntry uid1, [Match (SEntry uid2)])]
+batchMatchesWithThreshold :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => QuickSearch uid2 -> Int -> Scorer -> [(String, uid1)] -> [(Entry String uid1, [Match Score (Entry String uid2)])]
 type Token = Text
+
+-- | Structure associating a name with its unique identifier
+newtype Entry name uid
+Entry :: (name, uid) -> Entry name uid
 type Score = Int
 type Scorer = (Text -> Text -> Ratio Int)
-data SEntry uid
-SEntry :: String -> uid -> SEntry uid
-[sEntryName] :: SEntry uid -> String
-[sEntryUID] :: SEntry uid -> uid
-data Match a
-data QuickSearch uid
-QuickSearch :: [Entry uid] -> HashMap Token (HashSet uid) -> QuickSearch uid
-instance GHC.Show.Show uid => GHC.Show.Show (QuickSearch.String.SEntry uid)
+
+-- | Structure associating a Score with an Entry, for holding search
+--   results
+data Match score entry
+
+-- | List of entries to be searched and a HashMap associating tokens with
+--   HashSets of UIDs related to entries containing the tokens.
+newtype QuickSearch uid
+QuickSearch :: ([Entry Text uid], HashMap Token (HashSet uid)) -> QuickSearch uid
 
 module QuickSearch.String.OneShot
 
 -- | Turn a match retrieval function into a one-shot batch function.
 --   Instead of creating a QuickSearch for reuse, this creates it in the
 --   background and discards it when done.
-oneShot :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => (QuickSearch uid2 -> Int -> Scorer -> String -> [Match (SEntry uid2)]) -> Int -> [(String, uid1)] -> [(String, uid2)] -> Scorer -> [(SEntry uid1, [Match (SEntry uid2)])]
+oneShot :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => (QuickSearch uid2 -> Int -> Scorer -> String -> [Match Score (Entry String uid2)]) -> Int -> [(String, uid1)] -> [(String, uid2)] -> Scorer -> [(Entry String uid1, [Match Score (Entry String uid2)])]
 
 -- | One-shot version of topNMatches. Builds the QuickSearch in the
 --   background and discards it when finished.
-oneShotTopNMatches :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => Int -> [(String, uid1)] -> [(String, uid2)] -> Scorer -> [(SEntry uid1, [Match (SEntry uid2)])]
+oneShotTopNMatches :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => Int -> [(String, uid1)] -> [(String, uid2)] -> Scorer -> [(Entry String uid1, [Match Score (Entry String uid2)])]
 
 -- | One-shot version of matchesWithThreshold. Builds the QuickSearch in
 --   the background and discards it when finished.
-oneShotMatchesWithThreshold :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => Int -> [(String, uid1)] -> [(String, uid2)] -> Scorer -> [(SEntry uid1, [Match (SEntry uid2)])]
+oneShotMatchesWithThreshold :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => Int -> [(String, uid1)] -> [(String, uid2)] -> Scorer -> [(Entry String uid1, [Match Score (Entry String uid2)])]
