@@ -1,4 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 
 module QuickSearch.Internal.Filter
     ( buildTokenPartitions
@@ -14,8 +16,7 @@ module QuickSearch.Internal.Filter
 
 import           Control.Arrow                  ( Arrow((&&&)) )
 import           Data.Bifunctor                 ( Bifunctor(bimap, first) )
-import           Data.Char                      ( isDigit
-                                                , isLower
+import           Data.Char                      ( isAlphaNum
                                                 , isSpace
                                                 )
 import qualified Data.HashMap.Lazy             as HMap
@@ -28,17 +29,17 @@ type Token = T.Text
 
 -- | Structure associating a name with its unique identifier
 newtype Entry name uid = Entry (name, uid)
-  deriving (Show)
+  deriving newtype (Show, Eq)
 
 instance Bifunctor Entry where
     bimap f g (Entry (name, uid)) = Entry (f name, g uid)
 
 -- | Name accessor for an Entry
-entryName :: (Hashable uid, Eq uid) => Entry name uid -> name
+entryName :: Entry name uid -> name
 entryName (Entry (name, _)) = name
 
 -- | UID accessor for an Entry
-entryUID :: (Hashable uid, Eq uid) => Entry name uid -> uid
+entryUID :: Entry name uid -> uid
 entryUID (Entry (_, uid)) = uid
 
 {- | Turn a Data.Text.Text string into a list of casefolded tokens.
@@ -51,14 +52,11 @@ entryUID (Entry (_, uid)) = uid
 wordTokenize
     :: T.Text  -- ^ The target string
     -> [Token]  -- ^ A list of tokens from the target string, casefolded
-wordTokenize = T.words . clean . T.toCaseFold
+wordTokenize = T.words . T.toCaseFold . T.map symToSpace . T.filter (`notElem` ".'")
   where
-    toDelete = ".'"
-    clean :: T.Text -> T.Text
-    clean = T.filter (`notElem` toDelete) . T.map cleanChar
-    cleanChar :: Char -> Char
-    cleanChar c | any ($ c) [isLower, isDigit, isSpace, (`elem` toDelete)] = c
-                | otherwise = ' '
+    symToSpace :: Char -> Char
+    symToSpace c | isAlphaNum c || isSpace c = c
+                 | otherwise = ' '
 
 {- | Convert an Entry T.Text uid to a tuple of ([wordTokenize name], uid)
 
@@ -96,7 +94,7 @@ tokenPartitions tokenizedEntries =
     allTokens   = unstableNub . concatMap fst $ tokenizedEntries
     allWith :: (Hashable uid, Eq uid) => Token -> HSet.HashSet uid
     allWith token =
-        HSet.fromList . map snd $ filter ((token `elem`) . fst) tokenizedEntries
+        HSet.fromList . map snd . filter ((token `elem`) . fst) $ tokenizedEntries
 
 {- | Given a target string and a Token HashMap, return the union of
    sets of uids associated with the tokens in the target string
