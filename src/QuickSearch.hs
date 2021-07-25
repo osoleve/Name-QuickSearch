@@ -1,5 +1,6 @@
 module QuickSearch
-    ( buildQuickSearch
+    ( buildTokenPartitions
+    , buildQuickSearch
     , rawBuildQuickSearch
     , matchesWithThreshold
     , topNMatches
@@ -53,10 +54,7 @@ buildQuickSearch
     :: (Hashable uid, Eq uid)
     => [(T.Text, uid)]  -- ^ List of entries to be searched
     -> QuickSearch uid  -- ^ QuickSearch object holding token partitions
-buildQuickSearch entries =
-    let entries'    = map Entry entries
-        tokenFilter = buildTokenPartitions entries'
-    in  QuickSearch (entries', tokenFilter)
+buildQuickSearch = rawBuildQuickSearch . map Entry
 
 -- | Given a QuickSearch object, scorer, and string, return the top N matches.
 topNMatches
@@ -77,9 +75,9 @@ matchesWithThreshold
     -> Scorer  -- ^ String similarity function of type (Text -> Text -> Ratio Int)
     -> T.Text  -- ^ String to be searched
     -> [Match Score (Entry T.Text uid)]  -- ^ Top N most similar entries
-matchesWithThreshold qs cutoff scorer entry =
-    let results = scoreMatches entry qs scorer
-    in  takeWhile ((>= cutoff) . matchScore) results
+matchesWithThreshold qs cutoff scorer entry = takeWhile ((>= cutoff) . matchScore)
+                                                        results
+    where results = scoreMatches entry qs scorer
 
 -- | Turn a match retrieval function into one that works on lists of entries.
 batch
