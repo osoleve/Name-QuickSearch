@@ -1,3 +1,6 @@
 .stack-work/
 *.lock
 *~
+test/*
+dist-newstyle/
+Name-QuickSearch.prof

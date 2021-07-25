@@ -41,10 +41,10 @@ newtype Entry name uid
 Entry :: (name, uid) -> Entry name uid
 
 -- | Name accessor for an Entry
-entryName :: (Hashable uid, Eq uid) => Entry name uid -> name
+entryName :: Entry name uid -> name
 
 -- | UID accessor for an Entry
-entryUID :: (Hashable uid, Eq uid) => Entry name uid -> uid
+entryUID :: Entry name uid -> uid
 
 -- | Map covariantly over the first argument.
 --   
@@ -64,17 +64,11 @@ entryUID :: (Hashable uid, Eq uid) => Entry name uid -> uid
 --   Left 'J'
 --   </pre>
 first :: Bifunctor p => (a -> b) -> p a c -> p b c
+instance (GHC.Classes.Eq name, GHC.Classes.Eq uid) => GHC.Classes.Eq (QuickSearch.Internal.Filter.Entry name uid)
 instance (GHC.Show.Show name, GHC.Show.Show uid) => GHC.Show.Show (QuickSearch.Internal.Filter.Entry name uid)
 instance Data.Bifunctor.Bifunctor QuickSearch.Internal.Filter.Entry
 
 module QuickSearch.Internal.Matcher
-
--- | Ignore the linter here, this is a performance thing
---   
---   Given a string to search, a QuickSearch object, and a similarity
---   function, returns potential matches contained in the QuickSearch
---   filters and their associated scores, in descending order by score.
-scoreMatches :: (Hashable uid, Eq uid) => Text -> QuickSearch uid -> Scorer -> [Match Score (Entry Text uid)]
 type Score = Int
 type Scorer = (Text -> Text -> Ratio Int)
 
@@ -82,6 +76,18 @@ type Scorer = (Text -> Text -> Ratio Int)
 --   results
 newtype Match score entry
 Match :: (score, entry) -> Match score entry
+
+-- | List of entries to be searched and a HashMap associating tokens with
+--   HashSets of UIDs related to entries containing the tokens.
+newtype QuickSearch uid
+QuickSearch :: ([Entry Text uid], HashMap Token (HashSet uid)) -> QuickSearch uid
+
+-- | Ignore the linter here, this is a performance thing
+--   
+--   Given a string to search, a QuickSearch object, and a similarity
+--   function, returns potential matches contained in the QuickSearch
+--   filters and their associated scores, in descending order by score.
+scoreMatches :: (Hashable uid, Eq uid) => Text -> QuickSearch uid -> Scorer -> [Match Score (Entry Text uid)]
 
 -- | Score accessor for Match
 matchScore :: Match Score (Entry name uid) -> Score
@@ -96,15 +102,17 @@ quickSearchEntries :: (Hashable uid, Eq uid) => QuickSearch uid -> [Entry Text u
 
 -- | tokenFilter accessor for QuickSearch
 quickSearchTokenFilter :: (Hashable uid, Eq uid) => QuickSearch uid -> HashMap Token (HashSet uid)
-
--- | List of entries to be searched and a HashMap associating tokens with
---   HashSets of UIDs related to entries containing the tokens.
-newtype QuickSearch uid
-QuickSearch :: ([Entry Text uid], HashMap Token (HashSet uid)) -> QuickSearch uid
+instance (GHC.Classes.Eq score, GHC.Classes.Eq entry) => GHC.Classes.Eq (QuickSearch.Internal.Matcher.Match score entry)
 instance (GHC.Show.Show score, GHC.Show.Show entry) => GHC.Show.Show (QuickSearch.Internal.Matcher.Match score entry)
 instance GHC.Show.Show uid => GHC.Show.Show (QuickSearch.Internal.Matcher.QuickSearch uid)
+instance Data.Bifunctor.Bifunctor QuickSearch.Internal.Matcher.Match
 
 module QuickSearch
+
+-- | Given the list of entries to be held by QuickSearch, return a HashMap
+--   keyed on tokens from the strings in the entries, where the associated
+--   HashMap value is the list of uids of entries containing the token.
+buildTokenPartitions :: (Hashable uid, Eq uid) => [Entry Text uid] -> HashMap Token (HashSet uid)
 
 -- | Given a list of pairs of (T.Text, uid) to be searched, create a
 --   QuickSearch object.
@@ -141,10 +149,10 @@ newtype Entry name uid
 Entry :: (name, uid) -> Entry name uid
 
 -- | Name accessor for an Entry
-entryName :: (Hashable uid, Eq uid) => Entry name uid -> name
+entryName :: Entry name uid -> name
 
 -- | UID accessor for an Entry
-entryUID :: (Hashable uid, Eq uid) => Entry name uid -> uid
+entryUID :: Entry name uid -> uid
 
 -- | Structure associating a Score with an Entry, for holding search
 --   results
@@ -155,6 +163,52 @@ Match :: (score, entry) -> Match score entry
 --   HashSets of UIDs related to entries containing the tokens.
 newtype QuickSearch uid
 QuickSearch :: ([Entry Text uid], HashMap Token (HashSet uid)) -> QuickSearch uid
+
+-- | Return normalized Damerau-Levenshtein distance between two <a>Text</a>
+--   values. 0 signifies no similarity between the strings, while 1 means
+--   exact match.
+--   
+--   See also:
+--   <a>https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance</a>.
+--   
+--   <b>Heads up</b>, before version <i>0.3.0</i> this function returned
+--   <tt><a>Ratio</a> <a>Natural</a></tt>.
+damerauLevenshteinNorm :: Text -> Text -> Ratio Int
+
+-- | Return Jaro distance between two <a>Text</a> values. Returned value is
+--   in the range from 0 (no similarity) to 1 (exact match).
+--   
+--   While the algorithm is pretty clear for artificial examples (like
+--   those from the linked Wikipedia article), for <i>arbitrary</i>
+--   strings, it may be hard to decide which of two strings should be
+--   considered as one having “reference” order of characters (order of
+--   matching characters in an essential part of the definition of the
+--   algorithm). This makes us consider the first string the “reference”
+--   string (with correct order of characters). Thus generally,
+--   
+--   <pre>
+--   jaro a b ≠ jaro b a
+--   </pre>
+--   
+--   This asymmetry can be found in all implementations of the algorithm on
+--   the internet, AFAIK.
+--   
+--   See also:
+--   <a>https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance</a>
+--   
+--   <b>Heads up</b>, before version <i>0.3.0</i> this function returned
+--   <tt><a>Ratio</a> <a>Natural</a></tt>.
+jaro :: Text -> Text -> Ratio Int
+
+-- | Return Jaro-Winkler distance between two <a>Text</a> values. Returned
+--   value is in range from 0 (no similarity) to 1 (exact match).
+--   
+--   See also:
+--   <a>https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance</a>
+--   
+--   <b>Heads up</b>, before version <i>0.3.0</i> this function returned
+--   <tt><a>Ratio</a> <a>Natural</a></tt>.
+jaroWinkler :: Text -> Text -> Ratio Int
 
 module QuickSearch.OneShot
 
@@ -224,7 +278,7 @@ module QuickSearch.String
 buildQuickSearch :: (Hashable uid, Eq uid) => [(String, uid)] -> QuickSearch uid
 
 -- | Given a list of entries to be searched, create a QuickSearch object.
-rawBuildQuickSearch :: (Hashable uid, Eq uid) => [Entry String uid] -> QuickSearch uid
+rawBuildQuickSearch :: (Hashable uid, Eq uid) => [Entry Text uid] -> QuickSearch uid
 
 -- | Given a QuickSearch object, scorer, and string, return the top N
 --   matches.
@@ -262,6 +316,52 @@ data Match score entry
 newtype QuickSearch uid
 QuickSearch :: ([Entry Text uid], HashMap Token (HashSet uid)) -> QuickSearch uid
 
+-- | Return normalized Damerau-Levenshtein distance between two <a>Text</a>
+--   values. 0 signifies no similarity between the strings, while 1 means
+--   exact match.
+--   
+--   See also:
+--   <a>https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance</a>.
+--   
+--   <b>Heads up</b>, before version <i>0.3.0</i> this function returned
+--   <tt><a>Ratio</a> <a>Natural</a></tt>.
+damerauLevenshteinNorm :: Text -> Text -> Ratio Int
+
+-- | Return Jaro distance between two <a>Text</a> values. Returned value is
+--   in the range from 0 (no similarity) to 1 (exact match).
+--   
+--   While the algorithm is pretty clear for artificial examples (like
+--   those from the linked Wikipedia article), for <i>arbitrary</i>
+--   strings, it may be hard to decide which of two strings should be
+--   considered as one having “reference” order of characters (order of
+--   matching characters in an essential part of the definition of the
+--   algorithm). This makes us consider the first string the “reference”
+--   string (with correct order of characters). Thus generally,
+--   
+--   <pre>
+--   jaro a b ≠ jaro b a
+--   </pre>
+--   
+--   This asymmetry can be found in all implementations of the algorithm on
+--   the internet, AFAIK.
+--   
+--   See also:
+--   <a>https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance</a>
+--   
+--   <b>Heads up</b>, before version <i>0.3.0</i> this function returned
+--   <tt><a>Ratio</a> <a>Natural</a></tt>.
+jaro :: Text -> Text -> Ratio Int
+
+-- | Return Jaro-Winkler distance between two <a>Text</a> values. Returned
+--   value is in range from 0 (no similarity) to 1 (exact match).
+--   
+--   See also:
+--   <a>https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance</a>
+--   
+--   <b>Heads up</b>, before version <i>0.3.0</i> this function returned
+--   <tt><a>Ratio</a> <a>Natural</a></tt>.
+jaroWinkler :: Text -> Text -> Ratio Int
+
 module QuickSearch.String.OneShot
 
 -- | Turn a match retrieval function into a one-shot batch function.
@@ -276,3 +376,49 @@ oneShotTopNMatches :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => Int ->
 -- | One-shot version of matchesWithThreshold. Builds the QuickSearch in
 --   the background and discards it when finished.
 oneShotMatchesWithThreshold :: (Hashable uid1, Eq uid1, Hashable uid2, Eq uid2) => Int -> [(String, uid1)] -> [(String, uid2)] -> Scorer -> [(Entry String uid1, [Match Score (Entry String uid2)])]
+
+-- | Return normalized Damerau-Levenshtein distance between two <a>Text</a>
+--   values. 0 signifies no similarity between the strings, while 1 means
+--   exact match.
+--   
+--   See also:
+--   <a>https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance</a>.
+--   
+--   <b>Heads up</b>, before version <i>0.3.0</i> this function returned
+--   <tt><a>Ratio</a> <a>Natural</a></tt>.
+damerauLevenshteinNorm :: Text -> Text -> Ratio Int
+
+-- | Return Jaro distance between two <a>Text</a> values. Returned value is
+--   in the range from 0 (no similarity) to 1 (exact match).
+--   
+--   While the algorithm is pretty clear for artificial examples (like
+--   those from the linked Wikipedia article), for <i>arbitrary</i>
+--   strings, it may be hard to decide which of two strings should be
+--   considered as one having “reference” order of characters (order of
+--   matching characters in an essential part of the definition of the
+--   algorithm). This makes us consider the first string the “reference”
+--   string (with correct order of characters). Thus generally,
+--   
+--   <pre>
+--   jaro a b ≠ jaro b a
+--   </pre>
+--   
+--   This asymmetry can be found in all implementations of the algorithm on
+--   the internet, AFAIK.
+--   
+--   See also:
+--   <a>https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance</a>
+--   
+--   <b>Heads up</b>, before version <i>0.3.0</i> this function returned
+--   <tt><a>Ratio</a> <a>Natural</a></tt>.
+jaro :: Text -> Text -> Ratio Int
+
+-- | Return Jaro-Winkler distance between two <a>Text</a> values. Returned
+--   value is in range from 0 (no similarity) to 1 (exact match).
+--   
+--   See also:
+--   <a>https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance</a>
+--   
+--   <b>Heads up</b>, before version <i>0.3.0</i> this function returned
+--   <tt><a>Ratio</a> <a>Natural</a></tt>.
+jaroWinkler :: Text -> Text -> Ratio Int

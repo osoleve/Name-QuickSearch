@@ -23,7 +23,8 @@ thousand names in under a second (once the QuickSearch is actually built...
 first search always takes several seconds to build the filters).
 
 Uses `Data.Text` internally, but there is an identical `String` interface
-to be found at `QuickSearch.String` if that suits the pipeline better.
+to be found at `QuickSearch.String` if that suits the pipeline better (but you
+  should probably be using `Data.Text`, `String` is much slower).
 
 Usage:
 

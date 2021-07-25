@@ -1,19 +1,21 @@
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 
 module QuickSearch.Internal.Matcher
-    ( scoreMatches
-    , Score
+    ( Score
     , Scorer
     , Match(..)
+    , QuickSearch(QuickSearch)
+    , scoreMatches
     , matchScore
     , matchEntry
     , quickSearchEntries
     , quickSearchTokenFilter
-    , QuickSearch(QuickSearch)
     ) where
 
 import           Control.Arrow                  ( Arrow((&&&)) )
-import           Data.Bifunctor                 ( Bifunctor(first) )
+import           Data.Bifunctor                 ( Bifunctor(..) )
 import qualified Data.HashMap.Lazy             as HMap
 import qualified Data.HashSet                  as HSet
 import           Data.Hashable                  ( Hashable )
@@ -39,7 +41,10 @@ type Scorer = (T.Text -> T.Text -> Ratio Int)
 
 -- | Structure associating a Score with an Entry, for holding search results
 newtype Match score entry = Match (score, entry)
-  deriving (Show)
+  deriving newtype (Show, Eq)
+
+instance Bifunctor Match where
+    bimap f g (Match (score, entry)) = Match (f score, g entry)
 
 -- | Score accessor for Match
 matchScore :: Match Score (Entry name uid) -> Score
@@ -55,7 +60,7 @@ matchEntry (Match (_, entry@(Entry (_, _)))) = entry
 newtype QuickSearch uid =
   QuickSearch ([Entry T.Text uid],
                 HMap.HashMap Token (HSet.HashSet uid))
-  deriving (Show)
+  deriving newtype (Show)
 
 -- | [Entry name uid] accessor for QuickSearch
 quickSearchEntries :: (Hashable uid, Eq uid) => QuickSearch uid -> [Entry T.Text uid]
@@ -78,10 +83,9 @@ scoreMatches
     -> Scorer  -- ^ A string distance function of type (Text -> Text -> Ratio Int)
     -> [Match Score (Entry T.Text uid)]  -- ^ A list of possible matches
 scoreMatches (T.toCaseFold -> entry) qs scorer =
-    let searchSpace  = pruneSearchSpace entry qs
-        searchSpace' = map (first T.toCaseFold) searchSpace
-        scoreEntry   = toPercent . scorer entry . entryName
-        results      = map (Match . (scoreEntry &&& id)) searchSpace'
+    let searchSpace = map (first T.toCaseFold) $ pruneSearchSpace entry qs
+        scoreEntry  = toPercent . scorer entry . entryName
+        results     = map (Match . (scoreEntry &&& id)) searchSpace
     in  sortBy (comparing (Down . matchScore)) results
 -- ^ Ignore the linter here, this is a performance thing
 

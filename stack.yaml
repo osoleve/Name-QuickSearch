@@ -55,8 +55,8 @@ build:
 ghc-options:
     # All packages
     "$locals": -Wall
-    "$targets": -Werror
-    "$everything": -O2
+    #"$targets": # -fprof-auto
+    #"$everything": -O2
 # Override default flag values for local packages and extra-deps
 # flags: {}
 

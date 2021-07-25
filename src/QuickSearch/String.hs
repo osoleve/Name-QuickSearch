@@ -19,8 +19,7 @@ module QuickSearch.String
     , jaroWinkler
     ) where
 
-import           Control.Arrow                  ( Arrow((&&&)) )
-import           Data.Bifunctor                 ( Bifunctor(first) )
+import           Data.Bifunctor                 ( Bifunctor(..) )
 import           Data.Hashable                  ( Hashable )
 import qualified Data.Text                     as T
 import           Data.Text.Metrics              ( damerauLevenshteinNorm
@@ -28,48 +27,25 @@ import           Data.Text.Metrics              ( damerauLevenshteinNorm
                                                 , jaroWinkler
                                                 )
 
-import           QuickSearch.Internal.Filter    ( Entry(..)
+import           QuickSearch                    ( Entry(..)
                                                 , Token
-                                                , buildTokenPartitions
                                                 , entryName
-                                                , entryUID
+                                                , rawBuildQuickSearch
                                                 )
 import           QuickSearch.Internal.Matcher   ( Match(..)
                                                 , QuickSearch(..)
                                                 , Score
                                                 , Scorer
-                                                , matchEntry
                                                 , matchScore
                                                 , scoreMatches
                                                 )
-
--- | Convert (Entry String uid) to (Entry T.Text uid)
-stringEntryToTextEntry :: (Hashable uid, Eq uid) => Entry String uid -> Entry T.Text uid
-stringEntryToTextEntry = first T.pack
-
--- | Convert (Entry T.Text uid) to (Entry String uid)
-textEntryToStringEntry :: (Hashable uid, Eq uid) => Entry T.Text uid -> Entry String uid
-textEntryToStringEntry = Entry . (T.unpack . entryName &&& entryUID)
 
 -- | Given a Match (Entry String uid), return it as a Match (Entry uid)
 scoredTextToString
     :: (Hashable uid, Eq uid)
     => Match Score (Entry T.Text uid)
     -> Match Score (Entry String uid)
-scoredTextToString scoredEntry = Match (score, textEntry)
-  where
-    (score, entry) = (matchScore &&& matchEntry) scoredEntry
-    textEntry      = textEntryToStringEntry entry
-
--- | Given a list of entries to be searched, create a QuickSearch object.
-rawBuildQuickSearch
-    :: (Hashable uid, Eq uid)
-    => [Entry String uid]  -- ^ List of entries to be searched
-    -> QuickSearch uid  -- ^ QuickSearch object holding token partitions
-rawBuildQuickSearch entries =
-    let entries'    = map stringEntryToTextEntry entries
-        tokenFilter = buildTokenPartitions entries'
-    in  QuickSearch (entries', tokenFilter)
+scoredTextToString = second $ first T.unpack
 
 {- | Given a list of pairs of (String, uid) to be searched,
    create a QuickSearch object.
@@ -78,8 +54,7 @@ buildQuickSearch
     :: (Hashable uid, Eq uid)
     => [(String, uid)]  -- ^ List of entries to be searched
     -> QuickSearch uid  -- ^ QuickSearch object holding token partitions
-buildQuickSearch entries = rawBuildQuickSearch entries'
-    where entries' = map Entry entries
+buildQuickSearch = rawBuildQuickSearch . map (Entry . first T.pack)
 
 -- | Given a QuickSearch object, scorer, and string, return the top N matches.
 topNMatches
