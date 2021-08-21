@@ -56,7 +56,7 @@ wordTokenize = T.words . T.toCaseFold . T.map symToSpace . T.filter (`notElem` "
   where
     symToSpace :: Char -> Char
     symToSpace c | isAlphaNum c || isSpace c = c
-                 | otherwise = ' '
+                 | otherwise                 = ' '
 
 {- | Convert an Entry T.Text uid to a tuple of ([wordTokenize name], uid)
 
@@ -85,16 +85,16 @@ tokenPartitions
      . (Hashable uid, Eq uid)
     => [([Token], uid)]  -- ^ List of tokenized entries
     -> HMap.HashMap Token (HSet.HashSet uid)  -- ^ A map of Token -> [uids]
-tokenPartitions tokenizedEntries =
-    HMap.fromList $ [ (tok, allWith tok) | tok <- allTokens ]
+tokenPartitions tokEntries = foldr (\t m -> HMap.insert t (allWith t) m)
+                                   HMap.empty
+                                   allTokens
   where
     unstableNub :: [Token] -> [Token]
     -- ^ Quick dedupe of a list. Does not preserve order.
     unstableNub = HSet.toList . HSet.fromList
-    allTokens   = unstableNub . concatMap fst $ tokenizedEntries
+    allTokens   = unstableNub . concatMap fst $ tokEntries
     allWith :: (Hashable uid, Eq uid) => Token -> HSet.HashSet uid
-    allWith token =
-        HSet.fromList . map snd . filter ((token `elem`) . fst) $ tokenizedEntries
+    allWith token = HSet.fromList . map snd . filter ((token `elem`) . fst) $ tokEntries
 
 {- | Given a target string and a Token HashMap, return the union of
    sets of uids associated with the tokens in the target string
